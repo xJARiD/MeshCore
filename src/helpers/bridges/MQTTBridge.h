@@ -67,6 +67,7 @@ private:
     uint8_t qos;
     bool enabled;
     bool connected;
+    bool initial_connect_done;  // True after first connect() call - auto-reconnect handles the rest
     unsigned long last_attempt;
     unsigned long reconnect_interval;
   };
@@ -256,6 +257,18 @@ public:
    * @return true if all required MQTT settings are properly configured
    */
   static bool isConfigValid(const NodePrefs* prefs);
+
+  /**
+   * Time (millis()) when WiFi was last seen connected. 0 when disconnected or unknown.
+   * Used by get wifi.status to report uptime when WITH_MQTT_BRIDGE is defined.
+   */
+  static unsigned long getWifiConnectedAtMillis();
+
+  /**
+   * Format an informative MQTT status line for get mqtt.status (msgs, broker, analyzers, queue).
+   * Writes into buf, at most bufsize bytes. Requires bridge to have been initialized (begin() called).
+   */
+  static void formatMqttStatusReply(char* buf, size_t bufsize, const NodePrefs* prefs);
 
   /**
    * Check if MQTT bridge is ready to operate (has WiFi credentials)

@@ -45,6 +45,48 @@ static bool isWiFiConfigValid(const NodePrefs* prefs) {
 
 #ifdef WITH_MQTT_BRIDGE
 
+// Time (millis()) when WiFi was last seen connected; 0 when disconnected. Used for get wifi.status uptime.
+static unsigned long s_wifi_connected_at = 0;
+
+// Singleton for formatMqttStatusReply (set in begin(), cleared in end())
+static MQTTBridge* s_mqtt_bridge_instance = nullptr;
+
+unsigned long MQTTBridge::getWifiConnectedAtMillis() {
+  return s_wifi_connected_at;
+}
+
+void MQTTBridge::formatMqttStatusReply(char* buf, size_t bufsize, const NodePrefs* prefs) {
+  if (buf == nullptr || bufsize == 0) return;
+  const char* msgs = (prefs->mqtt_status_enabled) ? "on" : "off";
+  if (s_mqtt_bridge_instance == nullptr || !s_mqtt_bridge_instance->_initialized) {
+    snprintf(buf, bufsize, "> msgs: %s (bridge not running)", msgs);
+    return;
+  }
+  MQTTBridge* b = s_mqtt_bridge_instance;
+  const char* broker = "n/a";
+  if (b->_config_valid) {
+    broker = b->_cached_has_brokers ? "connected" : "disconnected";
+  }
+  const char* us = "off";
+  if (prefs->mqtt_analyzer_us_enabled) {
+    us = (b->_analyzer_us_client && b->_analyzer_us_client->connected()) ? "connected" : "disconnected";
+  }
+  const char* eu = "off";
+  if (prefs->mqtt_analyzer_eu_enabled) {
+    eu = (b->_analyzer_eu_client && b->_analyzer_eu_client->connected()) ? "connected" : "disconnected";
+  }
+  int q = 0;
+#ifdef ESP_PLATFORM
+  if (b->_packet_queue_handle != nullptr) {
+    q = (int)uxQueueMessagesWaiting(b->_packet_queue_handle);
+  }
+#else
+  q = b->_queue_count;
+#endif
+  snprintf(buf, bufsize, "> msgs: %s, broker: %s, us: %s, eu: %s, queue: %d",
+           msgs, broker, us, eu, q);
+}
+
 MQTTBridge::MQTTBridge(NodePrefs *prefs, mesh::PacketManager *mgr, mesh::RTCClock *rtc, mesh::LocalIdentity *identity)
     : BridgeBase(prefs, mgr, rtc), _mqtt_client(nullptr),
       _active_brokers(0), _queue_count(0),
@@ -188,38 +230,33 @@ void MQTTBridge::begin() {
     return;
   }
   
-  // Initialize PsychicMqttClient (will be used by task)
-  _mqtt_client = new PsychicMqttClient();
-  
-  // Optimize MQTT client configuration for memory efficiency
-  optimizeMqttClientConfig(_mqtt_client, false);
-  
-  // Set up event callbacks for the main MQTT client
-  _mqtt_client->onConnect([this](bool sessionPresent) {
-    MQTT_DEBUG_PRINTLN("MQTT broker connected");
-    for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
-      if (_brokers[i].enabled && !_brokers[i].connected) {
-        _brokers[i].connected = true;
-        _active_brokers++;
-        // Update cached broker status
-        _cached_has_brokers = isAnyBrokerConnected();
-        break;
+  // Create main MQTT client only when a custom broker is configured (saves RAM when using analyzer-only)
+  if (_config_valid) {
+    _mqtt_client = new PsychicMqttClient();
+    optimizeMqttClientConfig(_mqtt_client, false);
+    _mqtt_client->onConnect([this](bool sessionPresent) {
+      MQTT_DEBUG_PRINTLN("MQTT broker connected");
+      for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
+        if (_brokers[i].enabled && !_brokers[i].connected) {
+          _brokers[i].connected = true;
+          _active_brokers++;
+          _cached_has_brokers = isAnyBrokerConnected();
+          break;
+        }
       }
-    }
-  });
-  
-  _mqtt_client->onDisconnect([this](bool sessionPresent) {
-    MQTT_DEBUG_PRINTLN("MQTT broker disconnected");
-    for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
-      if (_brokers[i].connected) {
-        _brokers[i].connected = false;
-        _active_brokers--;
-        // Update cached broker status
-        _cached_has_brokers = isAnyBrokerConnected();
-        break;
+    });
+    _mqtt_client->onDisconnect([this](bool sessionPresent) {
+      MQTT_DEBUG_PRINTLN("MQTT broker disconnected");
+      for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
+        if (_brokers[i].connected) {
+          _brokers[i].connected = false;
+          _active_brokers--;
+          _cached_has_brokers = isAnyBrokerConnected();
+          break;
+        }
       }
-    }
-  });
+    });
+  }
   
   // Set default broker from preferences or build flags
   setBroker(0, _prefs->mqtt_server, _prefs->mqtt_port, _prefs->mqtt_username, _prefs->mqtt_password, true);
@@ -258,8 +295,10 @@ void MQTTBridge::begin() {
     _packet_queue_handle = nullptr;
     vSemaphoreDelete(_raw_data_mutex);
     _raw_data_mutex = nullptr;
-    delete _mqtt_client;
-    _mqtt_client = nullptr;
+    if (_mqtt_client) {
+      delete _mqtt_client;
+      _mqtt_client = nullptr;
+    }
     return;
   }
   
@@ -271,36 +310,33 @@ void MQTTBridge::begin() {
   WiFi.setAutoConnect(true);
   WiFi.begin(_prefs->wifi_ssid, _prefs->wifi_password);
   
-  // Initialize PsychicMqttClient
-  _mqtt_client = new PsychicMqttClient();
-  optimizeMqttClientConfig(_mqtt_client, false);
-  
-  // Set up event callbacks
-  _mqtt_client->onConnect([this](bool sessionPresent) {
-    MQTT_DEBUG_PRINTLN("MQTT broker connected");
-    for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
-      if (_brokers[i].enabled && !_brokers[i].connected) {
-        _brokers[i].connected = true;
-        _active_brokers++;
-        // Update cached broker status
-        _cached_has_brokers = isAnyBrokerConnected();
-        break;
+  // Create main MQTT client only when a custom broker is configured (saves RAM when using analyzer-only)
+  if (_config_valid) {
+    _mqtt_client = new PsychicMqttClient();
+    optimizeMqttClientConfig(_mqtt_client, false);
+    _mqtt_client->onConnect([this](bool sessionPresent) {
+      MQTT_DEBUG_PRINTLN("MQTT broker connected");
+      for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
+        if (_brokers[i].enabled && !_brokers[i].connected) {
+          _brokers[i].connected = true;
+          _active_brokers++;
+          _cached_has_brokers = isAnyBrokerConnected();
+          break;
+        }
       }
-    }
-  });
-  
-  _mqtt_client->onDisconnect([this](bool sessionPresent) {
-    MQTT_DEBUG_PRINTLN("MQTT broker disconnected");
-    for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
-      if (_brokers[i].connected) {
-        _brokers[i].connected = false;
-        _active_brokers--;
-        // Update cached broker status
-        _cached_has_brokers = isAnyBrokerConnected();
-        break;
+    });
+    _mqtt_client->onDisconnect([this](bool sessionPresent) {
+      MQTT_DEBUG_PRINTLN("MQTT broker disconnected");
+      for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
+        if (_brokers[i].connected) {
+          _brokers[i].connected = false;
+          _active_brokers--;
+          _cached_has_brokers = isAnyBrokerConnected();
+          break;
+        }
       }
-    }
-  });
+    });
+  }
   
   setBroker(0, _prefs->mqtt_server, _prefs->mqtt_port, _prefs->mqtt_username, _prefs->mqtt_password, true);
   _analyzer_us_enabled = _prefs->mqtt_analyzer_us_enabled;
@@ -310,11 +346,13 @@ void MQTTBridge::begin() {
   #endif
   
   _initialized = true;
+  s_mqtt_bridge_instance = this;
   MQTT_DEBUG_PRINTLN("MQTT Bridge initialized");
 }
 
 void MQTTBridge::end() {
   MQTT_DEBUG_PRINTLN("Stopping MQTT Bridge...");
+  s_mqtt_bridge_instance = nullptr;
   
   #ifdef ESP_PLATFORM
   // Delete FreeRTOS task first (it will clean up WiFi/MQTT connections)
@@ -344,11 +382,13 @@ void MQTTBridge::end() {
     _raw_data_mutex = nullptr;
   }
   #else
-  // Disconnect from all brokers
-  for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
-    if (_brokers[i].enabled && _brokers[i].connected) {
-      _mqtt_client->disconnect();
-      _brokers[i].connected = false;
+  // Disconnect from all brokers (main client only exists when _config_valid)
+  if (_mqtt_client) {
+    for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
+      if (_brokers[i].enabled && _brokers[i].connected) {
+        _mqtt_client->disconnect();
+        _brokers[i].connected = false;
+      }
     }
   }
   
@@ -463,6 +503,11 @@ void MQTTBridge::mqttTaskLoop() {
     unsigned long now = millis();
     wl_status_t current_wifi_status = WiFi.status();
     
+    // Backfill WiFi connect time when already connected (e.g. boot with WiFi up) so get wifi.status shows uptime
+    if (current_wifi_status == WL_CONNECTED && s_wifi_connected_at == 0) {
+      s_wifi_connected_at = millis();
+    }
+    
     // Initialize last_wifi_status on first loop() call
     if (!wifi_status_initialized) {
       last_wifi_status = current_wifi_status;
@@ -477,6 +522,7 @@ void MQTTBridge::mqttTaskLoop() {
       if (current_wifi_status == WL_CONNECTED) {
         if (last_wifi_status != WL_CONNECTED) {
           wifi_disconnected_time = 0;
+          s_wifi_connected_at = millis();
           // Configure WiFi power management for efficient operation
           wifi_ps_type_t ps_mode;
           uint8_t ps_pref = _prefs->wifi_power_save;
@@ -499,10 +545,22 @@ void MQTTBridge::mqttTaskLoop() {
           // NTP sync will be handled by _ntp_sync_pending flag from WiFi event handler
           // This prevents multiple simultaneous syncs
         }
+        // If already connected but we never recorded connect time (e.g. boot with WiFi up), set it now
+        if (s_wifi_connected_at == 0) {
+          s_wifi_connected_at = millis();
+        }
         last_wifi_status = WL_CONNECTED;
       } else {
         if (last_wifi_status == WL_CONNECTED) {
           wifi_disconnected_time = now;
+          s_wifi_connected_at = 0;
+          // Explicitly stop analyzer MQTT clients so ESP-IDF frees their buffers (it does not free on WiFi drop)
+          if (_analyzer_us_client) {
+            _analyzer_us_client->disconnect();
+          }
+          if (_analyzer_eu_client) {
+            _analyzer_eu_client->disconnect();
+          }
         } else if (wifi_disconnected_time > 0) {
           unsigned long disconnected_duration = now - wifi_disconnected_time;
           
@@ -727,6 +785,10 @@ void MQTTBridge::loop() {
   unsigned long now = millis();
   wl_status_t current_wifi_status = WiFi.status();
   
+  if (current_wifi_status == WL_CONNECTED && s_wifi_connected_at == 0) {
+    s_wifi_connected_at = millis();
+  }
+  
   // Initialize last_wifi_status on first loop() call
   if (!wifi_status_initialized) {
     last_wifi_status = current_wifi_status;
@@ -743,14 +805,26 @@ void MQTTBridge::loop() {
     if (current_wifi_status == WL_CONNECTED) {
       if (last_wifi_status != WL_CONNECTED) {
         wifi_disconnected_time = 0;
+        s_wifi_connected_at = millis();
         if (!_ntp_synced) {
           syncTimeWithNTP();
         }
+      }
+      if (s_wifi_connected_at == 0) {
+        s_wifi_connected_at = millis();
       }
       last_wifi_status = WL_CONNECTED;
     } else {
       if (last_wifi_status == WL_CONNECTED) {
         wifi_disconnected_time = now;
+        s_wifi_connected_at = 0;
+        // Explicitly stop analyzer MQTT clients so ESP-IDF frees their buffers (it does not free on WiFi drop)
+        if (_analyzer_us_client) {
+          _analyzer_us_client->disconnect();
+        }
+        if (_analyzer_eu_client) {
+          _analyzer_eu_client->disconnect();
+        }
       } else if (wifi_disconnected_time > 0) {
         unsigned long disconnected_duration = now - wifi_disconnected_time;
         
@@ -903,7 +977,7 @@ void MQTTBridge::loop() {
         for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
           if (_brokers[i].enabled) {
             _brokers[i].connected = false;
-            _brokers[i].last_attempt = 0;  // Allow immediate reconnect
+            _brokers[i].last_attempt = 0;  // Allow immediate reconnect after full reinit
           }
         }
         _active_brokers = 0;
@@ -1008,70 +1082,60 @@ void MQTTBridge::connectToBrokers() {
     return;
   }
   
+  // Throttle main broker reconnection to avoid rapid connect/disconnect loops when signal is flaky
+  static const unsigned long MAIN_BROKER_RECONNECT_THROTTLE_MS = 30000;
+
   // For now, connect to the first enabled broker
   // TODO: Implement multi-broker support with PsychicMqttClient
   for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
     if (!_brokers[i].enabled) continue;
-    
-    // Check if we need to attempt connection
-    // Allow immediate reconnect if last_attempt is 0 (was reset due to failure)
-    bool can_attempt = (_brokers[i].last_attempt == 0) || 
-                       (millis() - _brokers[i].last_attempt > _brokers[i].reconnect_interval);
-    
-    if (!_brokers[i].connected && can_attempt) {
-      MQTT_DEBUG_PRINTLN("Connecting to broker %d: %s:%d", i, _brokers[i].host, _brokers[i].port);
-      
-      // Generate unique client ID
-      char client_id[32];
-      snprintf(client_id, sizeof(client_id), "%s_%d_%lu", _origin, i, millis());
-      
+
+    // Only call connect() once for initial connection.
+    // After that, ESP-IDF's auto-reconnect handles reconnection automatically.
+    // If we forced disconnect (e.g. on publish failure), we must call connect() again
+    // since disconnect() stops the client; throttle to avoid reconnect storms when signal is bad.
+    if (!_brokers[i].initial_connect_done) {
+      MQTT_DEBUG_PRINTLN("Initial connection to broker %d: %s:%d", i, _brokers[i].host, _brokers[i].port);
+
       // Set broker URI and connect using PsychicMqttClient API
       char broker_uri[128];
       snprintf(broker_uri, sizeof(broker_uri), "mqtt://%s:%d", _brokers[i].host, _brokers[i].port);
       _mqtt_client->setServer(broker_uri);
-      
+
       // Set credentials if provided
       if (strlen(_brokers[i].username) > 0) {
         _mqtt_client->setCredentials(_brokers[i].username, _brokers[i].password);
       }
-      
-      // Ensure we're disconnected before attempting new connection
-      if (_mqtt_client->connected()) {
-        _mqtt_client->disconnect();
-        vTaskDelay(pdMS_TO_TICKS(100));  // Brief delay to allow disconnect to complete
-      }
-      
+
       // Connect to the broker (PsychicMqttClient uses async connection)
+      // ESP-IDF MQTT client has auto-reconnect enabled by default (10s retry)
       _mqtt_client->connect();
-      
-      // Update attempt timestamp
+
+      _brokers[i].initial_connect_done = true;
       _brokers[i].last_attempt = millis();
-      MQTT_DEBUG_PRINTLN("Initiating connection to broker %d", i);
-    }
-    
-    // Maintain connection and check for stale connections
-    if (_brokers[i].connected) {
-      // Check actual connection state - if it's stale, mark as disconnected and trigger reconnect
-      // PsychicMqttClient handles automatic reconnection internally, but we need to detect stale state
-      if (!_mqtt_client->connected()) {
-        MQTT_DEBUG_PRINTLN("Broker %d connection lost, marking for reconnect", i);
-        _brokers[i].connected = false;
-        _active_brokers--;
-        _brokers[i].last_attempt = 0;  // Reset attempt time to allow immediate reconnect
-        // Update cached broker status
-        _cached_has_brokers = isAnyBrokerConnected();
-      }
-      // Removed aggressive 4-hour health check that was causing connection instability.
-      // The MQTT client library handles connection health internally, and forcing
-      // disconnections on healthy connections was causing hours of downtime.
-    } else {
-      // Not connected - ensure we attempt reconnection if enough time has passed
-      // Reset last_attempt if it's been too long (prevents getting stuck)
-      if (_brokers[i].last_attempt > 0 && (millis() - _brokers[i].last_attempt) > 300000) {
-        // Been trying for more than 5 minutes - reset to allow fresh attempt
-        _brokers[i].last_attempt = 0;
+      MQTT_DEBUG_PRINTLN("Initiated connection to broker %d (auto-reconnect will handle future reconnections)", i);
+    } else if (_mqtt_client && !_mqtt_client->connected()) {
+      // Main broker was stopped (e.g. after forced disconnect on publish failure). Reconnect with throttle.
+      unsigned long now = millis();
+      unsigned long reconnect_elapsed = (_brokers[i].last_attempt <= now)
+          ? (now - _brokers[i].last_attempt)
+          : (ULONG_MAX - _brokers[i].last_attempt + now + 1);
+      if (reconnect_elapsed >= MAIN_BROKER_RECONNECT_THROTTLE_MS) {
+        MQTT_DEBUG_PRINTLN("Reconnecting to broker %d: %s:%d (throttled)", i, _brokers[i].host, _brokers[i].port);
+        char broker_uri[128];
+        snprintf(broker_uri, sizeof(broker_uri), "mqtt://%s:%d", _brokers[i].host, _brokers[i].port);
+        _mqtt_client->setServer(broker_uri);
+        if (strlen(_brokers[i].username) > 0) {
+          _mqtt_client->setCredentials(_brokers[i].username, _brokers[i].password);
+        }
+        _mqtt_client->connect();
+        _brokers[i].last_attempt = now;
       }
     }
+
+    // Note: Connection state (_brokers[i].connected) is updated by onConnect/onDisconnect callbacks
+    // We just update the cached status here for consistency
+    _cached_has_brokers = isAnyBrokerConnected();
   }
   
   // Update cached broker status after connection attempts
@@ -1342,7 +1406,7 @@ bool MQTTBridge::publishStatus() {
                     // (packet publishes handle this more gracefully)
                     _brokers[i].connected = false;
                     _active_brokers--;
-                    _brokers[i].last_attempt = 0;
+                    _brokers[i].last_attempt = millis();  // Throttle reconnection
                     _cached_has_brokers = isAnyBrokerConnected();
                     continue;
                   }
@@ -1376,7 +1440,7 @@ bool MQTTBridge::publishStatus() {
                     }
                     _brokers[i].connected = false;
                     _active_brokers--;
-                    _brokers[i].last_attempt = 0;  // Reset attempt time to allow immediate reconnect
+                    _brokers[i].last_attempt = millis();  // Throttle reconnection (connectToBrokers will retry after MAIN_BROKER_RECONNECT_THROTTLE_MS)
                     // Update cached broker status
                     _cached_has_brokers = isAnyBrokerConnected();
                   }
@@ -1540,7 +1604,7 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
             }
             _brokers[i].connected = false;
             _active_brokers--;
-            _brokers[i].last_attempt = 0;  // Reset attempt time to allow immediate reconnect
+            _brokers[i].last_attempt = millis();  // Throttle reconnection (connectToBrokers will retry after MAIN_BROKER_RECONNECT_THROTTLE_MS)
             // Update cached broker status
             _cached_has_brokers = isAnyBrokerConnected();
           }
@@ -1650,7 +1714,7 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
             }
             _brokers[i].connected = false;
             _active_brokers--;
-            _brokers[i].last_attempt = 0;  // Reset attempt time to allow immediate reconnect
+            _brokers[i].last_attempt = millis();  // Throttle reconnection (connectToBrokers will retry after MAIN_BROKER_RECONNECT_THROTTLE_MS)
             // Update cached broker status
             _cached_has_brokers = isAnyBrokerConnected();
           }
@@ -1796,6 +1860,7 @@ void MQTTBridge::setBrokerDefaults() {
     _brokers[i].qos = 0;
     _brokers[i].enabled = false;
     _brokers[i].connected = false;
+    _brokers[i].initial_connect_done = false;
     _brokers[i].reconnect_interval = 5000; // 5 seconds
   }
 }
@@ -2520,7 +2585,7 @@ void MQTTBridge::maintainAnalyzerConnections() {
       }
     }
   }
-  
+
   // Note: PsychicMqttClient handles automatic reconnection internally,
   // but we need to ensure tokens are renewed before reconnection attempts
 }

@@ -641,7 +641,7 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, const char* command, ch
       } else if (memcmp(config, "mqtt.iata", 9) == 0) {
         sprintf(reply, "> %s", _prefs->mqtt_iata);
       } else if (memcmp(config, "mqtt.status", 11) == 0) {
-        sprintf(reply, "> %s", _prefs->mqtt_status_enabled ? "on" : "off");
+        MQTTBridge::formatMqttStatusReply(reply, 160, _prefs);
       } else if (memcmp(config, "mqtt.packets", 12) == 0) {
         sprintf(reply, "> %s", _prefs->mqtt_packets_enabled ? "on" : "off");
       } else if (memcmp(config, "mqtt.raw", 8) == 0) {
@@ -677,6 +677,28 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, const char* command, ch
         }
         if (status == WL_CONNECTED) {
           sprintf(reply, "> %s, IP: %s, RSSI: %d dBm", status_str, WiFi.localIP().toString().c_str(), WiFi.RSSI());
+#ifdef WITH_MQTT_BRIDGE
+          unsigned long connect_at = MQTTBridge::getWifiConnectedAtMillis();
+          if (connect_at != 0) {
+            unsigned long uptime_ms = millis() - connect_at;
+            unsigned long uptime_sec = uptime_ms / 1000;
+            unsigned long d = uptime_sec / 86400;
+            unsigned long h = (uptime_sec % 86400) / 3600;
+            unsigned long m = (uptime_sec % 3600) / 60;
+            unsigned long s = uptime_sec % 60;
+            size_t len = strlen(reply);
+            const size_t reply_remaining = 128;  // caller provides buffer (e.g. 161 bytes), leave headroom
+            if (d > 0) {
+              snprintf(reply + len, reply_remaining, ", uptime: %lud %luh %lum %lus", d, h, m, s);
+            } else if (h > 0) {
+              snprintf(reply + len, reply_remaining, ", uptime: %luh %lum %lus", h, m, s);
+            } else if (m > 0) {
+              snprintf(reply + len, reply_remaining, ", uptime: %lum %lus", m, s);
+            } else {
+              snprintf(reply + len, reply_remaining, ", uptime: %lus", s);
+            }
+          }
+#endif
         } else {
           sprintf(reply, "> %s (code: %d)", status_str, status);
         }
