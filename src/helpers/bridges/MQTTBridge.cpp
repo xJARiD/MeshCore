@@ -3144,6 +3144,10 @@ void MQTTBridge::getClientVersion(char* buffer, size_t buffer_size) const {
 void MQTTBridge::optimizeMqttClientConfig(PsychicMqttClient* client, bool is_analyzer_client) {
   if (!client) return;
   
+  // Keepalive 45s: Cloudflare closes WebSocket connections after 100s idle (non-configurable).
+  // Sending PINGREQ every 45s keeps the connection alive through the proxy.
+  client->setKeepAlive(45);
+  
   // Use a single buffer size for all clients to reduce heap fragmentation: mixed sizes
   // (e.g. 640 vs 896) create different-sized holes that are harder to reuse on reconnect.
   // 896 is the minimum safe size for analyzer clients (CONNECT + 768-byte JWT); main
