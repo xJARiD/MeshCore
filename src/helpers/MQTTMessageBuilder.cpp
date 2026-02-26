@@ -211,18 +211,18 @@ int MQTTMessageBuilder::buildPacketJSON(
   packet->calculatePacketHash(packet_hash);
   bytesToHex(packet_hash, MAX_HASH_SIZE, hash_str, sizeof(hash_str));
   
-  // Build path string for direct packets
+  // Build path string for direct packets (multibyte-path: show hash count, hash size, byte length)
   char path_str[128] = "";
   if (packet->isRouteDirect() && packet->path_len > 0) {
-    // Simplified path representation
-    snprintf(path_str, sizeof(path_str), "path_len_%d", packet->path_len);
+    snprintf(path_str, sizeof(path_str), "path_%dx%d_%db",
+             (int)packet->getPathHashCount(), (int)packet->getPathHashSize(), (int)packet->getPathByteLen());
   }
   
   return buildPacketMessage(
     origin, origin_id, timestamp,
     is_tx ? "tx" : "rx",
     time_str, date_str,
-    packet->path_len + packet->payload_len + 2,
+    packet->getRawLength(),
     packet_type, route_str,
     packet->payload_len,
     raw_hex,
@@ -293,11 +293,11 @@ int MQTTMessageBuilder::buildPacketJSONFromRaw(
   packet->calculatePacketHash(packet_hash);
   bytesToHex(packet_hash, MAX_HASH_SIZE, hash_str, sizeof(hash_str));
   
-  // Build path string for direct packets
+  // Build path string for direct packets (multibyte-path: show hash count, hash size, byte length)
   char path_str[128] = "";
   if (packet->isRouteDirect() && packet->path_len > 0) {
-    // Simplified path representation
-    snprintf(path_str, sizeof(path_str), "path_len_%d", packet->path_len);
+    snprintf(path_str, sizeof(path_str), "path_%dx%d_%db",
+             (int)packet->getPathHashCount(), (int)packet->getPathHashSize(), (int)packet->getPathByteLen());
   }
   
   return buildPacketMessage(
