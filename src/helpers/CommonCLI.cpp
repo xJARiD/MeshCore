@@ -3,6 +3,7 @@
 #include "TxtDataHelpers.h"
 #include "AdvertDataHelpers.h"
 #include <RTClib.h>
+#include <Timezone.h>
 #ifdef ESP_PLATFORM
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -43,6 +44,36 @@ static bool isValidName(const char *n) {
   }
   return true;
 }
+static uint32_t toLocalEpoch(const NodePrefs* prefs, uint32_t utc_epoch) {
+  if (!prefs) return utc_epoch;
+
+  const char* tz = prefs->timezone_string;
+  if (tz && tz[0] != '\0') {
+    if (strcmp(tz, "Australia/Melbourne") == 0 || strcmp(tz, "AEST") == 0 || strcmp(tz, "AEDT") == 0) {
+      TimeChangeRule aedt = {"AEDT", First, Sun, Oct, 2, 660}; // UTC+11
+      TimeChangeRule aest = {"AEST", First, Sun, Apr, 3, 600}; // UTC+10
+      Timezone melbourne(aedt, aest);
+      return (uint32_t)melbourne.toLocal((time_t)utc_epoch);
+    }
+    if (strcmp(tz, "UTC") == 0 || strcmp(tz, "Etc/UTC") == 0 || strcmp(tz, "GMT") == 0) {
+      return utc_epoch;
+    }
+  }
+
+  int8_t offset = prefs->timezone_offset;
+  if (offset >= -12 && offset <= 14) {
+    int32_t adjusted = (int32_t)utc_epoch + ((int32_t)offset * 3600);
+    return adjusted > 0 ? (uint32_t)adjusted : 0;
+  }
+  return utc_epoch;
+}
+
+static const char* getTimezoneLabel(const NodePrefs* prefs) {
+  if (!prefs) return "UTC";
+  if (prefs->timezone_string[0] != '\0') return prefs->timezone_string;
+  return "UTC";
+}
+
 
 void CommonCLI::loadPrefs(FILESYSTEM* fs) {
   bool is_fresh_install = false;
@@ -478,15 +509,11 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, const char* command, ch
       _callbacks->sendSelfAdvertisement(1500, true);  // longer delay, give CLI response time to be sent first
       strcpy(reply, "OK - Advert sent");
     } else if (memcmp(command, "clock sync", 10) == 0) {
-      uint32_t curr = getRTCClock()->getCurrentTime();
-      if (sender_timestamp > curr) {
-        getRTCClock()->setCurrentTime(sender_timestamp + 1);
-        uint32_t now = getRTCClock()->getCurrentTime();
-        DateTime dt = DateTime(now);
-        sprintf(reply, "OK - clock set: %02d:%02d - %d/%d/%d UTC", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year());
-      } else {
-        strcpy(reply, "ERR: clock cannot go backwards");
-      }
+      getRTCClock()->setCurrentTime(sender_timestamp + 1);
+      uint32_t now = getRTCClock()->getCurrentTime();
+      uint32_t local_now = toLocalEpoch(_prefs, now);
+      DateTime dt = DateTime(local_now);
+      sprintf(reply, "OK - clock set: %02d:%02d - %d/%d/%d %s", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year(), getTimezoneLabel(_prefs));
     } else if (memcmp(command, "memory", 6) == 0) {
       sprintf(reply, "Free: %d, Min: %d, Max: %d, Queue: %d", 
               ESP.getFreeHeap(), ESP.getMinFreeHeap(), ESP.getMaxAllocHeap(), 
@@ -497,19 +524,16 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, const char* command, ch
       }
     } else if (memcmp(command, "clock", 5) == 0) {
       uint32_t now = getRTCClock()->getCurrentTime();
-      DateTime dt = DateTime(now);
-      sprintf(reply, "%02d:%02d - %d/%d/%d UTC", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year());
+      uint32_t local_now = toLocalEpoch(_prefs, now);
+      DateTime dt = DateTime(local_now);
+      sprintf(reply, "%02d:%02d - %d/%d/%d %s", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year(), getTimezoneLabel(_prefs));
     } else if (memcmp(command, "time ", 5) == 0) {  // set time (to epoch seconds)
       uint32_t secs = _atoi(&command[5]);
-      uint32_t curr = getRTCClock()->getCurrentTime();
-      if (secs > curr) {
-        getRTCClock()->setCurrentTime(secs);
-        uint32_t now = getRTCClock()->getCurrentTime();
-        DateTime dt = DateTime(now);
-        sprintf(reply, "OK - clock set: %02d:%02d - %d/%d/%d UTC", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year());
-      } else {
-        strcpy(reply, "(ERR: clock cannot go backwards)");
-      }
+      getRTCClock()->setCurrentTime(secs);
+      uint32_t now = getRTCClock()->getCurrentTime();
+      uint32_t local_now = toLocalEpoch(_prefs, now);
+      DateTime dt = DateTime(local_now);
+      sprintf(reply, "OK - clock set: %02d:%02d - %d/%d/%d %s", dt.hour(), dt.minute(), dt.day(), dt.month(), dt.year(), getTimezoneLabel(_prefs));
     } else if (memcmp(command, "neighbors", 9) == 0) {
       _callbacks->formatNeighborsReply(reply);
     } else if (memcmp(command, "neighbor.remove ", 16) == 0) {
