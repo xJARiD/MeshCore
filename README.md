@@ -62,7 +62,7 @@ poetry run pio run
 For board-specific MQTT observer setup (Heltec V4), see:
 
 - [EastMesh MQTT Setup](./docs/eastmesh.md)
-- Credits: [`mqtt-observer-remote` branch](https://github.com/agessaman/MeshCore/tree/mqtt-observer-remote) by [@agessaman](https://github.com/agessaman).
+- Credits: [`mqtt-bridge-implementation` branch](https://github.com/agessaman/MeshCore/tree/mqtt-bridge-implementation) by [@agessaman](https://github.com/agessaman).
 
 ## ⚡️ MeshCore Flasher
 
