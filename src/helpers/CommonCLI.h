@@ -13,6 +13,11 @@
 #define ADVERT_LOC_SHARE      1
 #define ADVERT_LOC_PREFS      2
 
+#define LOOP_DETECT_OFF       0
+#define LOOP_DETECT_MINIMAL   1
+#define LOOP_DETECT_MODERATE  2
+#define LOOP_DETECT_STRICT    3
+
 struct NodePrefs { // persisted to file
   float airtime_factor;
   char node_name[32];
@@ -82,6 +87,8 @@ struct NodePrefs { // persisted to file
   uint8_t mqtt_analyzer_eu_enabled; // Enable EU analyzer server
   char mqtt_owner_public_key[65]; // Owner public key (hex string, same length as repeater public key)
   char mqtt_email[64]; // Owner email address for matching nodes with owners
+  
+  uint8_t loop_detect;
 };
 
 #ifdef WITH_MQTT_BRIDGE
