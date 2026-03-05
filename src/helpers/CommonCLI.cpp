@@ -975,8 +975,26 @@ void CommonCLI::handleCommand(uint32_t sender_timestamp, const char* command, ch
         strcpy(reply, "OK - reboot to apply");
 #ifdef WITH_BRIDGE
       } else if (memcmp(config, "bridge.enabled ", 15) == 0) {
-        _prefs->bridge_enabled = memcmp(&config[15], "on", 2) == 0;
-        _callbacks->setBridgeState(_prefs->bridge_enabled);
+        bool was_enabled = _prefs->bridge_enabled;
+        const char* state = &config[15];
+        bool enable = false;
+        if (memcmp(state, "on", 2) == 0) {
+          enable = true;
+        } else if (memcmp(state, "off", 3) == 0) {
+          enable = false;
+        } else {
+          strcpy(reply, "Error: bridge.enabled must be on or off");
+          return;
+        }
+
+        _prefs->bridge_enabled = enable;
+        // If bridge is already enabled, allow operator to force a clean restart with:
+        //   set bridge.enabled on
+        if (enable && was_enabled) {
+          _callbacks->restartBridge();
+        } else {
+          _callbacks->setBridgeState(enable);
+        }
         savePrefs();
         strcpy(reply, "OK");
       } else if (memcmp(config, "bridge.delay ", 13) == 0) {
