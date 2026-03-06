@@ -1,0 +1,1417 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the open source MeshCore firmware">
+      
+      
+      
+        <link rel="canonical" href="https://meshcore-dev.github.io/meshcore/MQTT_LIBRARY_ALTERNATIVES/">
+      
+      
+        <link rel="prev" href="../MQTT_IMPLEMENTATION/">
+      
+      
+        <link rel="next" href="../MQTT_MEMORY_ANALYSIS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>MQTT Library Alternatives with WebSocket Support - MeshCore Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../_stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mqtt-library-alternatives-with-websocket-support" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MeshCore Docs" class="md-header__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MeshCore Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MQTT Library Alternatives with WebSocket Support
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MeshCore Docs" class="md-nav__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    MeshCore Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MEMORY_MONITORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore Memory Monitoring Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_BUFFER_OPTIMIZATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Buffer Optimization Using getMqttConfig()
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Bridge Implementation for MeshCore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Alternatives with WebSocket Support
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Alternatives with WebSocket Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#current-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Library
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-libraries-with-websocket-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternative Libraries with WebSocket Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternative Libraries with WebSocket Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-asyncmqttclient-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. AsyncMqttClient ⭐ RECOMMENDED
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-esp-idf-mqtt-client-direct-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ESP-IDF MQTT Client (Direct Usage)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-lwmqtt-lightweight-mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. lwmqtt (Lightweight MQTT)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-pubsubclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. PubSubClient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-custom-websocket-mqtt-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Custom WebSocket + MQTT Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommendation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-stay-with-psychicmqttclient-optimize-usage-best-short-term" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A: Stay with PsychicMqttClient + Optimize Usage ⭐ BEST SHORT-TERM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-switch-to-asyncmqttclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B: Switch to AsyncMqttClient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-use-esp-idf-mqtt-client-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option C: Use ESP-IDF MQTT Client Directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-d-custom-implementation-long-term" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option D: Custom Implementation (Long-term)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-finding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Finding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_MEMORY_ANALYSIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Memory Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_RESPONSIVENESS_OPTIMIZATIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Implementation Responsiveness Review &amp; Optimizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_STABILITY_REVIEW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Connection Stability &amp; CLI Responsiveness Review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli_commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../companion_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Companion Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Documentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eastmesh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EastMesh MQTT Setup (Heltec V4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequently Asked Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kiss_modem_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore KISS Modem Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nrf52_power_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52 Power Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packet_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packet Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payloads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payload Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qr_codes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QR Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stats_binary_frames/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stats Binary Frame Structures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../terminal_chat_cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terminal Chat CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#current-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Library
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternative-libraries-with-websocket-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternative Libraries with WebSocket Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternative Libraries with WebSocket Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-asyncmqttclient-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. AsyncMqttClient ⭐ RECOMMENDED
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-esp-idf-mqtt-client-direct-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. ESP-IDF MQTT Client (Direct Usage)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-lwmqtt-lightweight-mqtt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. lwmqtt (Lightweight MQTT)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-pubsubclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. PubSubClient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-custom-websocket-mqtt-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Custom WebSocket + MQTT Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommendation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#option-a-stay-with-psychicmqttclient-optimize-usage-best-short-term" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A: Stay with PsychicMqttClient + Optimize Usage ⭐ BEST SHORT-TERM
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-switch-to-asyncmqttclient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B: Switch to AsyncMqttClient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-use-esp-idf-mqtt-client-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option C: Use ESP-IDF MQTT Client Directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-d-custom-implementation-long-term" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option D: Custom Implementation (Long-term)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-finding" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Finding
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/meshcore-dev/meshcore/edit/main/docs/MQTT_LIBRARY_ALTERNATIVES.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="mqtt-library-alternatives-with-websocket-support">MQTT Library Alternatives with WebSocket Support</h1>
+<h2 id="current-library">Current Library</h2>
+<ul>
+<li><strong>PsychicMqttClient</strong> (<code>elims/PsychicMqttClient@^0.2.4</code>)</li>
+<li><strong>WebSocket Support</strong>: ✅ Yes (WSS://)</li>
+<li><strong>Memory Issue</strong>: ESP-IDF <code>esp_mqtt_client_enqueue()</code> copies payloads internally</li>
+<li><strong>Platform</strong>: ESP32 only</li>
+</ul>
+<h2 id="alternative-libraries-with-websocket-support">Alternative Libraries with WebSocket Support</h2>
+<h3 id="1-asyncmqttclient-recommended">1. AsyncMqttClient ⭐ <strong>RECOMMENDED</strong></h3>
+<ul>
+<li><strong>Author</strong>: Marvin Roger</li>
+<li><strong>GitHub</strong>: https://github.com/marvinroger/AsyncMqttClient</li>
+<li><strong>PlatformIO</strong>: <code>marvinroger/AsyncMqttClient</code></li>
+<li><strong>WebSocket Support</strong>: ✅ Yes (WSS://)</li>
+<li><strong>Memory Management</strong>:</li>
+<li>Uses ESP-IDF MQTT client (same underlying library as PsychicMqttClient)</li>
+<li><strong>Same memory issue</strong>: ESP-IDF copies payloads internally</li>
+<li><strong>Pros</strong>:</li>
+<li>Well-established, widely used</li>
+<li>Similar API to PsychicMqttClient (almost drop-in replacement)</li>
+<li>Good documentation</li>
+<li><strong>Cons</strong>:</li>
+<li>Same underlying ESP-IDF library = same memory fragmentation issue</li>
+<li>May not solve the memory problem</li>
+</ul>
+<h3 id="2-esp-idf-mqtt-client-direct-usage">2. ESP-IDF MQTT Client (Direct Usage)</h3>
+<ul>
+<li><strong>Library</strong>: Built into ESP-IDF framework</li>
+<li><strong>WebSocket Support</strong>: ✅ Yes (WSS://)</li>
+<li><strong>Memory Management</strong>:</li>
+<li>Same as PsychicMqttClient (it's a wrapper)</li>
+<li>Can configure buffer sizes via <code>esp_mqtt_client_config_t</code></li>
+<li>May allow more control over memory</li>
+<li><strong>Pros</strong>:</li>
+<li>No wrapper overhead</li>
+<li>Direct control over configuration</li>
+<li>Can set buffer sizes, queue depths</li>
+<li><strong>Cons</strong>:</li>
+<li>More complex API</li>
+<li>Requires ESP-IDF knowledge</li>
+<li>Still copies payloads internally</li>
+<li><strong>Configuration Options</strong>:
+  <code>cpp
+  esp_mqtt_client_config_t mqtt_cfg = {
+      .buffer.size = 1024,  // Can reduce this
+      .buffer.out_size = 1024,  // Can reduce this
+      // ... other config
+  };</code></li>
+</ul>
+<h3 id="3-lwmqtt-lightweight-mqtt">3. lwmqtt (Lightweight MQTT)</h3>
+<ul>
+<li><strong>GitHub</strong>: https://github.com/256dpi/lwmqtt</li>
+<li><strong>WebSocket Support</strong>: ❌ <strong>NO</strong> - TCP only</li>
+<li><strong>Memory Management</strong>:</li>
+<li>Zero-copy design</li>
+<li>No dynamic allocations</li>
+<li>Fixed buffers</li>
+<li><strong>Pros</strong>:</li>
+<li>Excellent memory efficiency</li>
+<li>Zero-copy, no fragmentation</li>
+<li>Very lightweight</li>
+<li><strong>Cons</strong>:</li>
+<li><strong>No WebSocket support</strong> (deal breaker for analyzer servers)</li>
+<li>Would need separate WebSocket implementation</li>
+<li>More complex integration</li>
+</ul>
+<h3 id="4-pubsubclient">4. PubSubClient</h3>
+<ul>
+<li><strong>PlatformIO</strong>: <code>knolleary/PubSubClient</code></li>
+<li><strong>WebSocket Support</strong>: ❌ <strong>NO</strong> - TCP only</li>
+<li><strong>Memory Management</strong>:</li>
+<li>Uses fixed buffer (configurable size)</li>
+<li>Copies payloads into buffer</li>
+<li><strong>Pros</strong>:</li>
+<li>Simple API</li>
+<li>Widely used</li>
+<li>Predictable memory usage</li>
+<li><strong>Cons</strong>:</li>
+<li><strong>No WebSocket support</strong> (deal breaker)</li>
+<li>Synchronous (blocks)</li>
+<li>Less efficient than async libraries</li>
+</ul>
+<h3 id="5-custom-websocket-mqtt-implementation">5. Custom WebSocket + MQTT Implementation</h3>
+<ul>
+<li><strong>Approach</strong>: Use ESP-IDF WebSocket client + custom MQTT protocol layer</li>
+<li><strong>WebSocket Support</strong>: ✅ Yes (full control)</li>
+<li><strong>Memory Management</strong>:</li>
+<li>Full control over allocations</li>
+<li>Can implement zero-copy</li>
+<li>Custom buffer management</li>
+<li><strong>Pros</strong>:</li>
+<li>Complete control over memory</li>
+<li>Can optimize for our use case</li>
+<li>No unnecessary copies</li>
+<li><strong>Cons</strong>:</li>
+<li>Significant development effort</li>
+<li>Need to implement MQTT protocol</li>
+<li>Testing and maintenance burden</li>
+</ul>
+<h2 id="recommendation">Recommendation</h2>
+<h3 id="option-a-stay-with-psychicmqttclient-optimize-usage-best-short-term">Option A: Stay with PsychicMqttClient + Optimize Usage ⭐ <strong>BEST SHORT-TERM</strong></h3>
+<ul>
+<li><strong>Why</strong>: All ESP32 MQTT libraries use ESP-IDF underneath = same memory issue</li>
+<li><strong>Actions</strong>:</li>
+<li>Reduce number of publishes (single analyzer server)</li>
+<li>Test synchronous publishes (<code>async=false</code>)</li>
+<li>Configure ESP-IDF buffer sizes via PsychicMqttClient</li>
+<li>Keep memory pressure monitoring</li>
+</ul>
+<h3 id="option-b-switch-to-asyncmqttclient">Option B: Switch to AsyncMqttClient</h3>
+<ul>
+<li><strong>Why</strong>: More mature, better documented, similar API</li>
+<li><strong>Trade-off</strong>: Same memory issue (uses ESP-IDF)</li>
+<li><strong>Effort</strong>: Medium (API is similar, mostly drop-in)</li>
+</ul>
+<h3 id="option-c-use-esp-idf-mqtt-client-directly">Option C: Use ESP-IDF MQTT Client Directly</h3>
+<ul>
+<li><strong>Why</strong>: More control over configuration</li>
+<li><strong>Actions</strong>:</li>
+<li>Bypass wrapper library</li>
+<li>Configure buffer sizes directly</li>
+<li>May reduce some overhead</li>
+<li><strong>Effort</strong>: High (need to rewrite MQTT bridge code)</li>
+<li><strong>Benefit</strong>: Can tune ESP-IDF buffer sizes</li>
+</ul>
+<h3 id="option-d-custom-implementation-long-term">Option D: Custom Implementation (Long-term)</h3>
+<ul>
+<li><strong>Why</strong>: Complete control over memory</li>
+<li><strong>Effort</strong>: Very High (weeks of development)</li>
+<li><strong>Benefit</strong>: Optimal memory usage, zero-copy possible</li>
+</ul>
+<h2 id="key-finding">Key Finding</h2>
+<p>⚠️ <strong>All ESP32 MQTT libraries that support WebSockets use ESP-IDF <code>esp_mqtt_client</code> underneath</strong>, which copies payloads internally. This is a limitation of the ESP-IDF framework, not the wrapper libraries.</p>
+<p><strong>Options to reduce memory impact:</strong></p>
+<ol>
+<li>✅ Reduce number of publishes (already identified)</li>
+<li>✅ Memory pressure monitoring (already implemented)</li>
+<li>⚠️ Configure ESP-IDF buffer sizes (may help)</li>
+<li>⚠️ Use synchronous publishes (may reduce queue overhead)</li>
+<li>⚠️ Custom implementation (significant effort)</li>
+</ol>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li><strong>Test ESP-IDF Buffer Configuration</strong>:</li>
+<li>Try reducing <code>setBufferSize()</code> in PsychicMqttClient</li>
+<li>
+<p>May reduce per-client memory but won't fix publish allocations</p>
+</li>
+<li>
+<p><strong>Test Synchronous Publishes</strong>:</p>
+</li>
+<li>Try <code>async=false</code> to bypass queue</li>
+<li>
+<p>May reduce memory but blocks execution</p>
+</li>
+<li>
+<p><strong>Reduce Publishes</strong>:</p>
+</li>
+<li>Implement single analyzer server</li>
+<li>
+<p>Measure memory improvement</p>
+</li>
+<li>
+<p><strong>Consider ESP-IDF Direct Usage</strong>:</p>
+</li>
+<li>If other optimizations don't help enough</li>
+<li>More control but more complexity</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.action.edit", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

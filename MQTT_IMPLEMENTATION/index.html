@@ -1,0 +1,3009 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the open source MeshCore firmware">
+      
+      
+      
+        <link rel="canonical" href="https://meshcore-dev.github.io/meshcore/MQTT_IMPLEMENTATION/">
+      
+      
+        <link rel="prev" href="../MQTT_BUFFER_OPTIMIZATION/">
+      
+      
+        <link rel="next" href="../MQTT_LIBRARY_ALTERNATIVES/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>MQTT Bridge Implementation for MeshCore - MeshCore Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../_stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mqtt-bridge-implementation-for-meshcore" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MeshCore Docs" class="md-header__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MeshCore Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MQTT Bridge Implementation for MeshCore
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MeshCore Docs" class="md-nav__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    MeshCore Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MEMORY_MONITORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore Memory Monitoring Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_BUFFER_OPTIMIZATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Buffer Optimization Using getMqttConfig()
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Bridge Implementation for MeshCore
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Bridge Implementation for MeshCore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#essential-commands-to-get-mqtt-repeater-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Essential Commands to Get MQTT Repeater Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Added
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Files Added">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#heltec-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heltec V3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#station-g2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Station G2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-mqtt-server-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MQTT Server Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mqtt-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MQTT Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MQTT Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wifi-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WiFi Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WiFi Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timezone Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-timezone-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Timezone Formats
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridge-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bridge Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bridge-commands-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge Commands (bridge.*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridge-specific-commands-mqtt-wifi-timezone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge-Specific Commands (mqtt.*, wifi.*, timezone.*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mqtt-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MQTT Topics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MQTT Topics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-topic-meshcoreiatadevice_public_keystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packets-topic-meshcoreiatadevice_public_keypackets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packets Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-topic-meshcoreiatadevice_public_keyraw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json-message-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Message Formats
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="JSON Message Formats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packet-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packet Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#raw-radio-data-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Radio Data Capture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wifi-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WiFi Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ntp-time-synchronization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Time Synchronization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lets-mesh-analyzer-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Let's Mesh Analyzer Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-time-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-Time Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="First-Time Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-initial-boot-and-network-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Initial Boot and Network Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-connect-via-lora-repeater-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Connect via LoRa Repeater Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-wifi-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure WiFi Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-configure-device-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Configure Device Identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-configure-timezone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Configure Timezone
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-configure-mqtt-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Configure MQTT Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-verify-mqtt-broker-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Verify MQTT Broker Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-monitor-mqtt-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Monitor MQTT Messages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9: Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 9: Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#device-wont-connect-to-wifi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device Won't Connect to WiFi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-mqtt-messages-appearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No MQTT Messages Appearing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lora-configuration-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoRa Configuration Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-10-advanced-configuration-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 10: Advanced Configuration (Optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 10: Advanced Configuration (Optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-mqtt-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MQTT Broker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lets-mesh-analyzer-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Let's Mesh Analyzer Servers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_LIBRARY_ALTERNATIVES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Alternatives with WebSocket Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_MEMORY_ANALYSIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Memory Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_RESPONSIVENESS_OPTIMIZATIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Implementation Responsiveness Review &amp; Optimizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_STABILITY_REVIEW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Connection Stability &amp; CLI Responsiveness Review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli_commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../companion_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Companion Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Documentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eastmesh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EastMesh MQTT Setup (Heltec V4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequently Asked Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kiss_modem_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore KISS Modem Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nrf52_power_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52 Power Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packet_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packet Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payloads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payload Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qr_codes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QR Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stats_binary_frames/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stats Binary Frame Structures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../terminal_chat_cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terminal Chat CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Start Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Quick Start Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#essential-commands-to-get-mqtt-repeater-running" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Essential Commands to Get MQTT Repeater Running
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#files-added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Files Added
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Files Added">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-implementation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Implementation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#build-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#heltec-v3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Heltec V3
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#station-g2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Station G2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-mqtt-server-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MQTT Server Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CLI Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mqtt-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MQTT Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MQTT Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wifi-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WiFi Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WiFi Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Timezone Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#supported-timezone-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Timezone Formats
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridge-commands" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge Commands
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bridge Commands">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-commands_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Get Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-commands_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Commands
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bridge-commands-bridge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge Commands (bridge.*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bridge-specific-commands-mqtt-wifi-timezone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bridge-Specific Commands (mqtt.*, wifi.*, timezone.*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mqtt-topics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MQTT Topics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MQTT Topics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-topic-meshcoreiatadevice_public_keystatus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packets-topic-meshcoreiatadevice_public_keypackets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packets Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-topic-meshcoreiatadevice_public_keyraw" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Topic: meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#json-message-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JSON Message Formats
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="JSON Message Formats">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#status-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Status Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#packet-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Packet Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#raw-message" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Message
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#raw-radio-data-capture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raw Radio Data Capture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wifi-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        WiFi Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ntp-time-synchronization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NTP Time Synchronization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lets-mesh-analyzer-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Let's Mesh Analyzer Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#first-time-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-Time Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="First-Time Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#prerequisites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prerequisites
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-1-initial-boot-and-network-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Initial Boot and Network Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-connect-via-lora-repeater-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Connect via LoRa Repeater Console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-configure-wifi-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Configure WiFi Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-4-configure-device-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 4: Configure Device Identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-5-configure-timezone" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 5: Configure Timezone
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-6-configure-mqtt-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 6: Configure MQTT Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-7-verify-mqtt-broker-connection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 7: Verify MQTT Broker Connection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-8-monitor-mqtt-messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 8: Monitor MQTT Messages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-9-troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 9: Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 9: Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#device-wont-connect-to-wifi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Device Won't Connect to WiFi
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#no-mqtt-messages-appearing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        No MQTT Messages Appearing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timezone-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Timezone Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lora-configuration-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LoRa Configuration Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-10-advanced-configuration-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 10: Advanced Configuration (Optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Step 10: Advanced Configuration (Optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-mqtt-broker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom MQTT Broker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lets-mesh-analyzer-servers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Let's Mesh Analyzer Servers
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#future-enhancements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Future Enhancements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/meshcore-dev/meshcore/edit/main/docs/MQTT_IMPLEMENTATION.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="mqtt-bridge-implementation-for-meshcore">MQTT Bridge Implementation for MeshCore</h1>
+<p>This document describes the MQTT bridge implementation that allows MeshCore repeaters to uplink packet data to multiple MQTT brokers.</p>
+<h2 id="quick-start-guide">Quick Start Guide</h2>
+<h3 id="essential-commands-to-get-mqtt-repeater-running">Essential Commands to Get MQTT Repeater Running</h3>
+<p><strong>1. Connect to device console via repeater login or serial console (115200 baud)</strong></p>
+<pre><code class="language-bash"># Connect to device via serial
+</code></pre>
+<p><strong>2. Configure WiFi Credentials</strong></p>
+<pre><code class="language-bash">set wifi.ssid YourWiFiNetwork
+set wifi.pwd YourWiFiPassword
+</code></pre>
+<p>If you wish to upload to the MeshCore Analyzer, also <code>set mqtt.iata XXX</code> to a valid IATA airport code</p>
+<p><strong>3. Reboot to Connect to WiFi</strong></p>
+<pre><code class="language-bash">reboot
+</code></pre>
+<p><strong>4. Toggle bridge.source to rx</strong></p>
+<pre><code class="language-bash">set bridge.source rx
+</code></pre>
+<p><strong>5. Verify Configuration</strong></p>
+<pre><code class="language-bash">get wifi.ssid
+get bridge.enabled
+get bridge.source
+get mqtt.origin
+get mqtt.iata
+</code></pre>
+<p><strong>6. Restart Bridge (if needed)</strong></p>
+<pre><code class="language-bash"># Option A: Toggle bridge off then on
+set bridge.enabled off
+set bridge.enabled on
+
+# Option B: Full device reboot
+reboot
+</code></pre>
+<p><strong>That's it!</strong> The device will now:</p>
+<ul>
+<li>Connect to WiFi automatically</li>
+<li>Start uplinking mesh packets to Let's Mesh Analyzer</li>
+<li>Publish to both custom MQTT broker and Let's Mesh Analyzer servers</li>
+<li>Use device name as MQTT origin (set automatically)</li>
+</ul>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>The MQTT bridge implementation provides:</p>
+<ul>
+<li>Multiple MQTT broker support (up to 3 brokers)</li>
+<li>Automatic reconnection with exponential backoff</li>
+<li>JSON message formatting for status, packets, and raw data</li>
+<li>Configurable topics and QoS levels</li>
+<li>Packet queuing during connection issues</li>
+</ul>
+<h2 id="files-added">Files Added</h2>
+<h3 id="core-implementation">Core Implementation</h3>
+<ul>
+<li><code>src/helpers/bridges/MQTTBridge.h</code> - MQTT bridge class definition</li>
+<li><code>src/helpers/bridges/MQTTBridge.cpp</code> - MQTT bridge implementation</li>
+<li><code>src/helpers/MQTTMessageBuilder.h</code> - JSON message formatting utilities</li>
+<li><code>src/helpers/MQTTMessageBuilder.cpp</code> - JSON message formatting implementation</li>
+</ul>
+<h3 id="integration">Integration</h3>
+<ul>
+<li>Updated <code>examples/simple_repeater/MyMesh.h</code> - Added MQTT bridge support</li>
+<li>Updated <code>examples/simple_repeater/MyMesh.cpp</code> - Added MQTT bridge integration and raw radio data capture</li>
+<li>Updated <code>src/helpers/CommonCLI.h</code> - Added MQTT, WiFi, and timezone configuration fields</li>
+<li>Updated <code>src/helpers/CommonCLI.cpp</code> - Added MQTT, WiFi, and timezone CLI commands</li>
+<li>Updated <code>variants/heltec_v3/platformio.ini</code> - Added MQTT build configuration</li>
+<li>Updated <code>variants/station_g2/platformio.ini</code> - Added MQTT build configuration for Station G2</li>
+</ul>
+<h2 id="build-configuration">Build Configuration</h2>
+<p>To build the MQTT bridge firmware:</p>
+<h3 id="heltec-v3">Heltec V3</h3>
+<pre><code class="language-bash">pio run -e Heltec_v3_repeater_observer_mqtt
+</code></pre>
+<h3 id="station-g2">Station G2</h3>
+<pre><code class="language-bash">pio run -e Station_G2_repeater_observer_mqtt
+</code></pre>
+<h3 id="custom-mqtt-server-configuration">Custom MQTT Server Configuration</h3>
+<p>You can configure a custom MQTT server using build flags in <code>platformio.ini</code>:</p>
+<pre><code class="language-ini">[env:Heltec_v3_repeater_observer_mqtt]
+build_flags =
+  ${Heltec_lora32_v3.build_flags}
+  -D WITH_MQTT_BRIDGE=1
+  -D MQTT_SERVER='&quot;your-mqtt-broker.com&quot;'
+  -D MQTT_PORT=1883
+  -D MQTT_USERNAME='&quot;your-username&quot;'
+  -D MQTT_PASSWORD='&quot;your-password&quot;'
+</code></pre>
+<p><strong>Build Flags:</strong></p>
+<ul>
+<li><code>MQTT_SERVER</code> - MQTT broker hostname</li>
+<li><code>MQTT_PORT</code> - MQTT broker port (default: 1883)</li>
+<li><code>MQTT_USERNAME</code> - MQTT username</li>
+<li><code>MQTT_PASSWORD</code> - MQTT password</li>
+<li><code>MQTT_WIFI_TX_POWER</code> - WiFi TX power level (default: <code>WIFI_POWER_11dBm</code>)</li>
+<li>Available values: <code>WIFI_POWER_19_5dBm</code>, <code>WIFI_POWER_19dBm</code>, <code>WIFI_POWER_18_5dBm</code>, <code>WIFI_POWER_17_5dBm</code>, <code>WIFI_POWER_15dBm</code>, <code>WIFI_POWER_13dBm</code>, <code>WIFI_POWER_11dBm</code>, <code>WIFI_POWER_8_5dBm</code>, <code>WIFI_POWER_7dBm</code>, <code>WIFI_POWER_5dBm</code>, <code>WIFI_POWER_2dBm</code>, <code>WIFI_POWER_MINUS_1dBm</code></li>
+<li>Example: <code>-D MQTT_WIFI_TX_POWER=WIFI_POWER_19_5dBm</code> for maximum power</li>
+<li><strong>Note</strong>: These power levels are appropriate for ESP32 and ESP32-S3. ESP32-C3 and ESP32-C6 may have different maximum power capabilities. If an invalid constant is used for your chip, the compiler will report an error. Check your specific ESP32 variant's datasheet for maximum supported TX power.</li>
+</ul>
+<h2 id="default-configuration">Default Configuration</h2>
+<p>The MQTT bridge comes with the following defaults:</p>
+<ul>
+<li><strong>Origin</strong>: "MeshCore-Repeater"</li>
+<li><strong>IATA</strong>: "SEA"</li>
+<li><strong>Status Messages</strong>: Enabled</li>
+<li><strong>Packet Messages</strong>: Enabled</li>
+<li><strong>Raw Messages</strong>: Disabled</li>
+<li><strong>TX Messages</strong>: Disabled (RX only by default)</li>
+<li><strong>Status Interval</strong>: 5 minutes (300000 ms)</li>
+<li><strong>Default Broker</strong>: meshtastic.pugetmesh.org:1883 (username: meshdev, password: large4cats)</li>
+<li><strong>WiFi SSID</strong>: "ssid_here" (must be configured)</li>
+<li><strong>WiFi Password</strong>: "password_here" (must be configured)</li>
+<li><strong>WiFi Power Save</strong>: "min" (minimum power saving, balanced performance and power)</li>
+<li><strong>Timezone</strong>: "America/Los_Angeles" (Pacific Time with DST support)</li>
+<li><strong>Timezone Offset</strong>: -8 hours (fallback)</li>
+<li><strong>Let's Mesh Analyzer US</strong>: Enabled (mqtt-us-v1.letsmesh.net:443)</li>
+<li><strong>Let's Mesh Analyzer EU</strong>: Enabled (mqtt-eu-v1.letsmesh.net:443)</li>
+</ul>
+<h2 id="cli-commands">CLI Commands</h2>
+<h3 id="mqtt-commands">MQTT Commands</h3>
+<h4 id="get-commands">Get Commands</h4>
+<ul>
+<li><code>get mqtt.origin</code> - Get device origin name</li>
+<li><code>get mqtt.iata</code> - Get IATA code</li>
+<li><code>get mqtt.status</code> - Get status message setting (on/off)</li>
+<li><code>get mqtt.packets</code> - Get packet message setting (on/off)</li>
+<li><code>get mqtt.raw</code> - Get raw message setting (on/off)</li>
+<li><code>get mqtt.tx</code> - Get TX message setting (on/off)</li>
+<li><code>get mqtt.interval</code> - Get status publish interval (ms)</li>
+<li><code>get mqtt.server</code> - Get MQTT server hostname</li>
+<li><code>get mqtt.port</code> - Get MQTT server port</li>
+<li><code>get mqtt.username</code> - Get MQTT username</li>
+<li><code>get mqtt.password</code> - Get MQTT password</li>
+<li><code>get mqtt.analyzer.us</code> - Get US Let's Mesh Analyzer server setting (on/off)</li>
+<li><code>get mqtt.analyzer.eu</code> - Get EU Let's Mesh Analyzer server setting (on/off)</li>
+<li><code>get mqtt.owner</code> - Get owner public key (64 hex characters)</li>
+<li><strong>Note</strong>: Available via serial console only (not via LoRa repeater console)</li>
+<li><code>get mqtt.email</code> - Get owner email address</li>
+<li><strong>Note</strong>: Available via serial console only (not via LoRa repeater console)</li>
+</ul>
+<h4 id="set-commands">Set Commands</h4>
+<ul>
+<li><code>set mqtt.origin &lt;name&gt;</code> - Set device origin name</li>
+<li><code>set mqtt.iata &lt;code&gt;</code> - Set IATA code</li>
+<li><code>set mqtt.status on|off</code> - Enable/disable status messages</li>
+<li><code>set mqtt.packets on|off</code> - Enable/disable packet messages</li>
+<li><code>set mqtt.raw on|off</code> - Enable/disable raw messages</li>
+<li><code>set mqtt.tx on|off</code> - Enable/disable TX packet messages</li>
+<li><code>set mqtt.interval &lt;ms&gt;</code> - Set status publish interval (1000-3600000 ms)</li>
+<li><code>set mqtt.server &lt;hostname&gt;</code> - Set MQTT server hostname</li>
+<li><code>set mqtt.port &lt;port&gt;</code> - Set MQTT server port (1-65535)</li>
+<li><code>set mqtt.username &lt;username&gt;</code> - Set MQTT username</li>
+<li><code>set mqtt.password &lt;password&gt;</code> - Set MQTT password</li>
+<li><code>set mqtt.analyzer.us on|off</code> - Enable/disable US Let's Mesh Analyzer server</li>
+<li><code>set mqtt.analyzer.eu on|off</code> - Enable/disable EU Let's Mesh Analyzer server</li>
+<li><code>set mqtt.owner &lt;64-hex-char-public-key&gt;</code> - Set owner public key (64 hex characters, 32 bytes)</li>
+<li><code>set mqtt.email &lt;email&gt;</code> - Set owner email address for matching nodes with owners</li>
+</ul>
+<h3 id="wifi-commands">WiFi Commands</h3>
+<h4 id="get-commands_1">Get Commands</h4>
+<ul>
+<li><code>get wifi.ssid</code> - Get WiFi SSID</li>
+<li><code>get wifi.pwd</code> - Get WiFi password</li>
+<li><code>get wifi.powersave</code> - Get WiFi power save mode (none/min/max)</li>
+</ul>
+<h4 id="set-commands_1">Set Commands</h4>
+<ul>
+<li><code>set wifi.ssid &lt;ssid&gt;</code> - Set WiFi SSID</li>
+<li><code>set wifi.pwd &lt;password&gt;</code> - Set WiFi password</li>
+<li><code>set wifi.powersave none|min|max</code> - Set WiFi power save mode</li>
+<li><code>none</code> - No power saving (best performance, highest power consumption)</li>
+<li><code>min</code> - Minimum power saving (default, balanced performance and power)</li>
+<li><code>max</code> - Maximum power saving (lowest power consumption, may affect performance)</li>
+</ul>
+<h3 id="timezone-commands">Timezone Commands</h3>
+<h4 id="get-commands_2">Get Commands</h4>
+<ul>
+<li><code>get timezone</code> - Get timezone string (e.g., "America/Los_Angeles")</li>
+<li><code>get timezone.offset</code> - Get timezone offset in hours (-12 to +14)</li>
+</ul>
+<h4 id="set-commands_2">Set Commands</h4>
+<ul>
+<li><code>set timezone &lt;string&gt;</code> - Set timezone string (IANA format or abbreviation)</li>
+<li><code>set timezone.offset &lt;offset&gt;</code> - Set timezone offset in hours (-12 to +14)</li>
+</ul>
+<h4 id="supported-timezone-formats">Supported Timezone Formats</h4>
+<ul>
+<li><strong>IANA strings</strong>: <code>America/Los_Angeles</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>, etc.</li>
+<li><strong>Common abbreviations</strong>: <code>PDT</code>, <code>PST</code>, <code>MDT</code>, <code>MST</code>, <code>CDT</code>, <code>CST</code>, <code>EDT</code>, <code>EST</code>, <code>BST</code>, <code>GMT</code>, <code>CEST</code>, <code>CET</code></li>
+<li><strong>UTC offsets</strong>: <code>UTC-8</code>, <code>UTC+5</code>, <code>+5</code>, <code>-8</code>, etc.</li>
+</ul>
+<h3 id="bridge-commands">Bridge Commands</h3>
+<h4 id="get-commands_3">Get Commands</h4>
+<ul>
+<li><code>get bridge.source</code> - Get packet source (rx/tx)</li>
+<li><code>get bridge.enabled</code> - Get bridge enabled status (on/off)</li>
+</ul>
+<h4 id="set-commands_3">Set Commands</h4>
+<ul>
+<li><code>set bridge.source rx|tx</code> - Set packet source (rx for received, tx for transmitted)</li>
+<li><code>set bridge.enabled on|off</code> - Enable/disable bridge</li>
+</ul>
+<h2 id="command-architecture">Command Architecture</h2>
+<p>The CLI commands are organized into two levels:</p>
+<h3 id="bridge-commands-bridge">Bridge Commands (<code>bridge.*</code>)</h3>
+<p><strong>Low-level bridge control</strong> - These settings apply to all bridge types (MQTT, RS232, ESP-NOW, etc.):</p>
+<ul>
+<li><code>bridge.enabled</code> - Master switch for the entire bridge system</li>
+<li><code>bridge.source</code> - Controls which packet events to capture (RX vs TX)</li>
+</ul>
+<h3 id="bridge-specific-commands-mqtt-wifi-timezone">Bridge-Specific Commands (<code>mqtt.*</code>, <code>wifi.*</code>, <code>timezone.*</code>)</h3>
+<p><strong>Implementation-specific settings</strong> - These only apply to the MQTT bridge:</p>
+<ul>
+<li><code>mqtt.*</code> - MQTT broker configuration, message types, and formatting</li>
+<li><code>wifi.*</code> - WiFi connection settings for MQTT connectivity</li>
+<li><code>timezone.*</code> - Timezone configuration for accurate timestamps</li>
+</ul>
+<p>This design allows MeshCore to support multiple bridge types simultaneously while keeping configuration clean and logical.</p>
+<h2 id="mqtt-topics">MQTT Topics</h2>
+<p>The bridge publishes to three main topics with the following structure:</p>
+<h3 id="status-topic-meshcoreiatadevice_public_keystatus">Status Topic: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status</code></h3>
+<p>Device connection status and metadata (retained messages).</p>
+<h3 id="packets-topic-meshcoreiatadevice_public_keypackets">Packets Topic: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets</code></h3>
+<p>Full packet data with RF characteristics and metadata.</p>
+<h3 id="raw-topic-meshcoreiatadevice_public_keyraw">Raw Topic: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw</code></h3>
+<p>Minimal raw packet data for map integration.</p>
+<p><strong>Note</strong>: <code>{DEVICE_PUBLIC_KEY}</code> is the device's public key in hexadecimal format (64 characters).</p>
+<h2 id="json-message-formats">JSON Message Formats</h2>
+<h3 id="status-message">Status Message</h3>
+<pre><code class="language-json">{
+  &quot;status&quot;: &quot;online|offline&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00.000000&quot;,
+  &quot;origin&quot;: &quot;Device Name&quot;,
+  &quot;origin_id&quot;: &quot;DEVICE_PUBLIC_KEY&quot;,
+  &quot;model&quot;: &quot;device_model&quot;,
+  &quot;firmware_version&quot;: &quot;firmware_version&quot;,
+  &quot;radio&quot;: &quot;radio_info&quot;,
+  &quot;client_version&quot;: &quot;meshcore-custom-repeater/{build_date}&quot;
+}
+</code></pre>
+<h3 id="packet-message">Packet Message</h3>
+<pre><code class="language-json">{
+  &quot;origin&quot;: &quot;MeshCore-HOWL&quot;,
+  &quot;origin_id&quot;: &quot;A1B2C3D4E5F67890...&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00.000000&quot;,
+  &quot;type&quot;: &quot;PACKET&quot;,
+  &quot;direction&quot;: &quot;rx|tx&quot;,
+  &quot;time&quot;: &quot;12:00:00&quot;,
+  &quot;date&quot;: &quot;01/01/2024&quot;,
+  &quot;len&quot;: &quot;45&quot;,
+  &quot;packet_type&quot;: &quot;4&quot;,
+  &quot;route&quot;: &quot;F|D|T|U&quot;,
+  &quot;payload_len&quot;: &quot;32&quot;,
+  &quot;raw&quot;: &quot;F5930103807E5F1E...&quot;,
+  &quot;SNR&quot;: &quot;12.5&quot;,
+  &quot;RSSI&quot;: &quot;-65&quot;,
+  &quot;hash&quot;: &quot;A1B2C3D4E5F67890&quot;,
+  &quot;path&quot;: &quot;node1,node2,node3&quot;
+}
+</code></pre>
+<h3 id="raw-message">Raw Message</h3>
+<pre><code class="language-json">{
+  &quot;origin&quot;: &quot;MeshCore-HOWL&quot;,
+  &quot;origin_id&quot;: &quot;A1B2C3D4E5F67890...&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00.000000&quot;,
+  &quot;type&quot;: &quot;RAW&quot;,
+  &quot;data&quot;: &quot;F5930103807E5F1E...&quot;
+}
+</code></pre>
+<h2 id="key-features">Key Features</h2>
+<h3 id="raw-radio-data-capture">Raw Radio Data Capture</h3>
+<ul>
+<li>Captures actual raw radio transmission data (including radio headers)</li>
+<li>Uses proper MeshCore packet hashing (SHA256-based)</li>
+<li>Provides accurate SNR/RSSI values from actual radio reception</li>
+<li>Supports both RX and TX packet uplinking (configurable)</li>
+</ul>
+<h3 id="timezone-support">Timezone Support</h3>
+<ul>
+<li>Full timezone support with automatic DST handling</li>
+<li>Supports IANA timezone strings, common abbreviations, and UTC offsets</li>
+<li>Separates local time (for timestamps) and UTC time (for time/date fields)</li>
+<li>Uses JChristensen/Timezone library for accurate timezone conversions</li>
+</ul>
+<h3 id="wifi-configuration">WiFi Configuration</h3>
+<ul>
+<li>Runtime WiFi credential management via CLI</li>
+<li>Persistent storage across reboots</li>
+<li>Automatic reconnection with exponential backoff</li>
+</ul>
+<h3 id="ntp-time-synchronization">NTP Time Synchronization</h3>
+<ul>
+<li>Automatic time synchronization with NTP servers</li>
+<li>Periodic time updates (every hour)</li>
+<li>Proper UTC system time handling</li>
+</ul>
+<h3 id="lets-mesh-analyzer-integration">Let's Mesh Analyzer Integration</h3>
+<ul>
+<li><strong>JWT Authentication</strong>: Ed25519-signed tokens for secure MQTT authentication</li>
+<li><strong>WebSocket MQTT</strong>: Support for MQTT over WebSocket connections (TLS/SSL)</li>
+<li><strong>Dual Server Support</strong>: Both US and EU servers enabled by default</li>
+<li><strong>Automatic Token Generation</strong>: Creates authentication tokens using device's Ed25519 keys</li>
+<li><strong>Username Format</strong>: <code>v1_{UPPERCASE_PUBLIC_KEY}</code> (e.g., <code>v1_7E7662676F7F0850A8A355BAAFBFC1EB7B4174C340442D7D7161C9474A2C9400</code>)</li>
+<li><strong>Server Configuration</strong>:</li>
+<li>US Server: <code>mqtt-us-v1.letsmesh.net:443</code> (WebSocket with TLS)</li>
+<li>EU Server: <code>mqtt-eu-v1.letsmesh.net:443</code> (WebSocket with TLS)</li>
+</ul>
+<h2 id="first-time-setup">First-Time Setup</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>MeshCore device with MQTT bridge firmware flashed</li>
+<li>WiFi network credentials</li>
+<li>MQTT broker (optional - default broker is provided)</li>
+<li>LoRa-capable device for configuration (repeater console)</li>
+<li>MeshCore network access</li>
+</ul>
+<h3 id="step-1-initial-boot-and-network-connection">Step 1: Initial Boot and Network Connection</h3>
+<ol>
+<li><strong>Flash the firmware</strong> to your device using PlatformIO or the build script</li>
+<li><strong>Deploy the device</strong> in your mesh network location</li>
+<li><strong>Ensure WiFi connectivity</strong> - the device will automatically connect to WiFi if credentials are pre-configured</li>
+<li><strong>Verify mesh network access</strong> - device should be discoverable by other mesh nodes</li>
+</ol>
+<h3 id="step-2-connect-via-lora-repeater-console">Step 2: Connect via LoRa Repeater Console</h3>
+<p>Use a MeshCore companion device to configure the Repeater's MQTT bridge.</p>
+<ol>
+<li><strong>Connect to the mesh</strong> using your companion</li>
+<li><strong>Locate the MQTT bridge device</strong> in your contacts</li>
+<li><strong>Log into your Repeater</strong> using the default password (password) or whatever you configured via serial console</li>
+<li><strong>Tap on the repeater console</strong> on your repeater's settings</li>
+<li><strong>Send configuration commands</strong> via LoRa to the MQTT bridge device</li>
+</ol>
+<h3 id="step-3-configure-wifi-connection">Step 3: Configure WiFi Connection</h3>
+<p>The device needs internet connectivity to publish to MQTT brokers.</p>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Set your WiFi credentials
+set wifi.ssid &quot;YourWiFiNetwork&quot;
+set wifi.pwd &quot;YourWiFiPassword&quot;
+
+# Optionally configure WiFi power saving (default: min)
+# Use &quot;none&quot; for best performance, &quot;min&quot; for balanced (default), &quot;max&quot; for lowest power
+set wifi.powersave min
+
+# Verify WiFi settings
+get wifi.ssid
+get wifi.pwd
+get wifi.powersave
+</code></pre>
+<h3 id="step-4-configure-device-identity">Step 4: Configure Device Identity</h3>
+<p>Set up your device's identity for MQTT topics and status messages.</p>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Set IATA code for topic structure (e.g., airport code)
+set mqtt.iata &quot;SEA&quot;
+
+# Verify settings (origin is set automatically to device name)
+get mqtt.origin
+get mqtt.iata
+</code></pre>
+<p><strong>Via Serial Console (Optional - Owner Configuration):</strong></p>
+<pre><code># Set owner public key (64 hex characters, 32 bytes)
+# This is used for matching nodes with owners in MQTT messages
+set mqtt.owner A1B2C3D4E5F6789012345678901234567890123456789012345678901234567890
+
+# Set owner email address
+set mqtt.email owner@example.com
+
+# Verify owner settings
+get mqtt.owner
+get mqtt.email
+</code></pre>
+<h3 id="step-5-configure-timezone">Step 5: Configure Timezone</h3>
+<p>Set your local timezone for accurate timestamps.</p>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Set timezone (choose one method)
+set timezone &quot;America/Los_Angeles&quot;    # IANA format
+set timezone &quot;PDT&quot;                    # Abbreviation
+set timezone &quot;UTC-8&quot;                  # UTC offset
+
+# Verify timezone
+get timezone
+</code></pre>
+<h3 id="step-6-configure-mqtt-settings">Step 6: Configure MQTT Settings</h3>
+<p>Customize which messages to publish and how often.</p>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Configure MQTT server (optional - uses defaults if not set)
+set mqtt.server &quot;your-mqtt-broker.com&quot;
+set mqtt.port 1883
+set mqtt.username &quot;your-username&quot;
+set mqtt.password &quot;your-password&quot;
+
+# Enable/disable message types
+set mqtt.status on                    # Device status messages
+set mqtt.packets on                   # Packet data messages
+set mqtt.raw off                      # Raw packet data (optional)
+set mqtt.tx off                       # Transmitted packets (optional)
+
+# Set status publish interval (default: 5 minutes)
+set mqtt.interval 300000
+
+# Verify settings
+get mqtt.server
+get mqtt.port
+get mqtt.username
+get mqtt.status
+get mqtt.packets
+get mqtt.interval
+</code></pre>
+<h3 id="step-7-verify-mqtt-broker-connection">Step 7: Verify MQTT Broker Connection</h3>
+<p>Check that the device can connect to MQTT brokers.</p>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Check bridge status
+get bridge.enabled
+
+# If disabled, enable it
+set bridge.enabled on
+
+# Check MQTT analyzer servers (optional)
+get mqtt.analyzer.us
+get mqtt.analyzer.eu
+</code></pre>
+<h3 id="step-8-monitor-mqtt-messages">Step 8: Monitor MQTT Messages</h3>
+<p>Once configured, the device will automatically publish messages to MQTT brokers.</p>
+<p><strong>Default MQTT Broker</strong>: <code>meshtastic.pugetmesh.org:1883</code></p>
+<ul>
+<li>Username: <code>meshdev</code></li>
+<li>Password: <code>large4cats</code></li>
+</ul>
+<p><strong>Topic Structure</strong>:</p>
+<ul>
+<li>Status: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status</code></li>
+<li>Packets: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets</code></li>
+<li>Raw: <code>meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw</code></li>
+</ul>
+<p><strong>Example Topics</strong>:</p>
+<ul>
+<li><code>meshcore/SEA/7E7662676F7F0850A8A355BAAFBFC1EB7B4174C340442D7D7161C9474A2C9400/status</code></li>
+<li><code>meshcore/SEA/7E7662676F7F0850A8A355BAAFBFC1EB7B4174C340442D7D7161C9474A2C9400/packets</code></li>
+</ul>
+<h3 id="step-9-troubleshooting">Step 9: Troubleshooting</h3>
+<h4 id="device-wont-connect-to-wifi">Device Won't Connect to WiFi</h4>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Check WiFi settings
+get wifi.ssid
+get wifi.pwd
+get wifi.powersave
+
+# Reset WiFi settings
+set wifi.ssid &quot;&quot;
+set wifi.pwd &quot;&quot;
+
+# Reconfigure with correct credentials
+set wifi.ssid &quot;YourWiFiNetwork&quot;
+set wifi.pwd &quot;YourWiFiPassword&quot;
+
+# If connection issues persist, try disabling power saving for better reliability
+set wifi.powersave none
+</code></pre>
+<h4 id="no-mqtt-messages-appearing">No MQTT Messages Appearing</h4>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Check bridge status
+get bridge.enabled
+
+# Check message types
+get mqtt.status
+get mqtt.packets
+
+# Check device identity (origin is set automatically)
+get mqtt.origin
+get mqtt.iata
+
+# Enable bridge if needed
+set bridge.enabled on
+</code></pre>
+<h4 id="timezone-issues">Timezone Issues</h4>
+<p><strong>Via LoRa Repeater Console:</strong></p>
+<pre><code># Check current timezone
+get timezone
+
+# Try different timezone formats
+set timezone &quot;America/New_York&quot;       # IANA format
+set timezone &quot;EST&quot;                    # Abbreviation
+set timezone &quot;UTC-5&quot;                  # UTC offset
+</code></pre>
+<h4 id="lora-configuration-issues">LoRa Configuration Issues</h4>
+<ul>
+<li><strong>Device not responding</strong>: Ensure both devices are on the same mesh network</li>
+<li><strong>Commands not working</strong>: Check that the target device is reachable via LoRa</li>
+<li><strong>No response to get commands</strong>: Verify the device is powered and in range</li>
+</ul>
+<h3 id="step-10-advanced-configuration-optional">Step 10: Advanced Configuration (Optional)</h3>
+<h4 id="custom-mqtt-broker">Custom MQTT Broker</h4>
+<p>If you want to use your own MQTT broker instead of the default:</p>
+<pre><code># Note: Custom broker configuration requires code modification
+# The default broker is: meshtastic.pugetmesh.org:1883
+# Username: meshdev, Password: large4cats
+</code></pre>
+<h4 id="lets-mesh-analyzer-servers">Let's Mesh Analyzer Servers</h4>
+<p>The device automatically connects to Let's Mesh Analyzer servers for additional monitoring:</p>
+<ul>
+<li><strong>US Server</strong>: <code>mqtt-us-v1.letsmesh.net:443</code> (WebSocket with TLS)</li>
+<li><strong>EU Server</strong>: <code>mqtt-eu-v1.letsmesh.net:443</code> (WebSocket with TLS)</li>
+</ul>
+<p>These are enabled by default and use JWT authentication with your device's Ed25519 keys.</p>
+<h2 id="testing">Testing</h2>
+<ol>
+<li>Flash the MQTT bridge firmware to your device</li>
+<li>Follow the first-time setup instructions above</li>
+<li>Monitor MQTT broker for incoming messages</li>
+<li>Verify message formats match the JSON schemas in this document</li>
+</ol>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li><strong>PubSubClient</strong>: MQTT client library</li>
+<li><strong>ArduinoJson</strong>: JSON message formatting (v6.17.3)</li>
+<li><strong>NTPClient</strong>: Network time protocol client</li>
+<li><strong>Timezone</strong>: Timezone conversion library (JChristensen/Timezone)</li>
+<li><strong>WiFi</strong>: ESP32 WiFi functionality</li>
+<li><strong>Ed25519</strong>: Cryptographic library for JWT token signing</li>
+<li><strong>JWTHelper</strong>: Custom JWT token generation for Let's Mesh Analyzer authentication</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>Full WebSocket MQTT implementation (currently JWT tokens are generated but WebSocket publishing is pending)</li>
+<li>Multiple broker configuration via CLI</li>
+<li>Advanced packet filtering</li>
+<li>Custom topic templates</li>
+<li>TLS/SSL support for secure connections</li>
+<li>Real-time WebSocket MQTT publishing to Let's Mesh Analyzer servers</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.action.edit", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

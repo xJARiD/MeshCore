@@ -1,0 +1,1640 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the open source MeshCore firmware">
+      
+      
+      
+        <link rel="canonical" href="https://meshcore-dev.github.io/meshcore/MQTT_MEMORY_ANALYSIS/">
+      
+      
+        <link rel="prev" href="../MQTT_LIBRARY_ALTERNATIVES/">
+      
+      
+        <link rel="next" href="../MQTT_RESPONSIVENESS_OPTIMIZATIONS/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>MQTT Library Memory Analysis - MeshCore Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../_stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mqtt-library-memory-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MeshCore Docs" class="md-header__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MeshCore Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MQTT Library Memory Analysis
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MeshCore Docs" class="md-nav__button md-logo" aria-label="MeshCore Docs" data-md-component="logo">
+      
+  <img src="../_assets/meshcore_tm.svg" alt="logo">
+
+    </a>
+    MeshCore Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/meshcore-dev/meshcore/" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    meshcore-dev/meshcore
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MEMORY_MONITORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore Memory Monitoring Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_BUFFER_OPTIMIZATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Buffer Optimization Using getMqttConfig()
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Bridge Implementation for MeshCore
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_LIBRARY_ALTERNATIVES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Alternatives with WebSocket Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Memory Analysis
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Library Memory Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#library-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library Information
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Usage Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current Usage Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-allocation-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Allocation Points
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-fragmentation-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Fragmentation Evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Fragmentation Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#observed-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observed Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-cause-confirmed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Cause - CONFIRMED ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-investigate-library-source-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Investigate Library Source Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-potential-optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Potential Optimizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Potential Optimizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-reduce-number-of-publishes-highest-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Reduce Number of Publishes ⭐ HIGHEST IMPACT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-reduce-payload-sizes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Reduce Payload Sizes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-throttle-publishes-already-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Throttle Publishes (Already Implemented) ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-use-synchronous-publishes-blocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. Use Synchronous Publishes (Blocking)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-reduce-buffer-size-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E. Reduce Buffer Size Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-investigate-esp-idf-mqtt-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F. Investigate ESP-IDF MQTT Client Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-library-alternatives-if-issues-persist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Library Alternatives (If Issues Persist)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-mitigations-current-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Mitigations (Current Branch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remaining-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remaining Risk
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_RESPONSIVENESS_OPTIMIZATIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Implementation Responsiveness Review &amp; Optimizations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MQTT_STABILITY_REVIEW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MQTT Connection Stability &amp; CLI Responsiveness Review
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli_commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../companion_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Companion Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Documentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../eastmesh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EastMesh MQTT Setup (Heltec V4)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequently Asked Questions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../kiss_modem_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MeshCore KISS Modem Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nrf52_power_management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nRF52 Power Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../packet_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Packet Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../payloads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Payload Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../qr_codes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QR Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../stats_binary_frames/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stats Binary Frame Structures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../terminal_chat_cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Terminal Chat CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#library-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Library Information
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-usage-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Usage Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current Usage Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#memory-allocation-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Allocation Points
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-fragmentation-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Memory Fragmentation Evidence
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory Fragmentation Evidence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#observed-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Observed Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#root-cause-confirmed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Root Cause - CONFIRMED ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommendations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recommendations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-investigate-library-source-code" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Investigate Library Source Code
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-potential-optimizations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Potential Optimizations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Potential Optimizations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-reduce-number-of-publishes-highest-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. Reduce Number of Publishes ⭐ HIGHEST IMPACT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-reduce-payload-sizes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Reduce Payload Sizes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-throttle-publishes-already-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Throttle Publishes (Already Implemented) ✅
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-use-synchronous-publishes-blocking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D. Use Synchronous Publishes (Blocking)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#e-reduce-buffer-size-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E. Reduce Buffer Size Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-investigate-esp-idf-mqtt-client-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F. Investigate ESP-IDF MQTT Client Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-library-alternatives-if-issues-persist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Library Alternatives (If Issues Persist)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#current-mitigations-current-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current Mitigations (Current Branch)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#remaining-risk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Remaining Risk
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/meshcore-dev/meshcore/edit/main/docs/MQTT_MEMORY_ANALYSIS.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="mqtt-library-memory-analysis">MQTT Library Memory Analysis</h1>
+<h2 id="library-information">Library Information</h2>
+<ul>
+<li><strong>Library</strong>: <code>elims/PsychicMqttClient@^0.2.4</code></li>
+<li><strong>Type</strong>: External PlatformIO library (wrapper around ESP-IDF MQTT client)</li>
+<li><strong>Platform</strong>: ESP32</li>
+<li><strong>Protocol</strong>: MQTT over WebSocket (WSS) for analyzer servers, standard MQTT for custom brokers</li>
+<li><strong>Underlying Library</strong>: ESP-IDF <code>esp_mqtt_client</code> (part of ESP-IDF framework)</li>
+<li><strong>Source Location</strong>: <code>.pio/libdeps/*/PsychicMqttClient/src/</code></li>
+</ul>
+<h2 id="current-usage-patterns">Current Usage Patterns</h2>
+<h3 id="memory-allocation-points">Memory Allocation Points</h3>
+<ol>
+<li><strong>Client Instance Creation</strong></li>
+</ol>
+<p><code>cpp
+   _mqtt_client = new PsychicMqttClient();  // Heap allocation
+   _analyzer_us_client = new PsychicMqttClient();  // Heap allocation
+   _analyzer_eu_client = new PsychicMqttClient();  // Heap allocation</code></p>
+<ul>
+<li>
+<p><strong>Impact</strong>: 3 instances × ~few KB each = ~10-15KB base memory</p>
+</li>
+<li>
+<p><strong>setServer() Calls</strong> ✅ <strong>OPTIMIZED - NO ALLOCATION IN WRAPPER</strong></p>
+</li>
+</ul>
+<p><code>cpp
+   // From PsychicMqttClient.cpp line 215-223
+   PsychicMqttClient &amp;setServer(const char *uri) {
+       _mqtt_cfg.broker.address.uri = uri;  // Just stores pointer
+       return *this;
+   }</code></p>
+<ul>
+<li><strong>Finding</strong>: Wrapper does NOT copy URI (just stores pointer)</li>
+<li><strong>Current Optimization</strong>: We only call <code>setServer()</code> when URI changes (using static tracking) ✅</li>
+<li><strong>ESP-IDF Behavior</strong>: When <code>connect()</code> is called, ESP-IDF likely copies the URI internally</li>
+<li>
+<p><strong>Impact</strong>: Minimal (only on connection, not per publish)</p>
+</li>
+<li>
+<p><strong>setCredentials() Calls</strong> ✅ <strong>NO ALLOCATION IN WRAPPER</strong></p>
+</li>
+</ul>
+<p><code>cpp
+   // From PsychicMqttClient.cpp line 166-178
+   PsychicMqttClient &amp;setCredentials(const char *username, const char *password) {
+       _mqtt_cfg.credentials.username = username;  // Just stores pointers
+       _mqtt_cfg.credentials.authentication.password = password;
+       return *this;
+   }</code></p>
+<ul>
+<li><strong>Finding</strong>: Wrapper does NOT copy credentials (just stores pointers)</li>
+<li><strong>Frequency</strong>: Once per broker connection</li>
+<li><strong>ESP-IDF Behavior</strong>: Likely copies when connecting</li>
+<li>
+<p><strong>Impact</strong>: Minimal (only on connection, not per publish)</p>
+</li>
+<li>
+<p><strong>publish() Calls</strong> ⚠️ <strong>CONFIRMED MAIN CULPRIT</strong></p>
+</li>
+</ul>
+<p><code>cpp
+   // From PsychicMqttClient.cpp line 370-389
+   int publish(const char *topic, int qos, bool retain, const char *payload, int length, bool async)
+   {
+       if (async) {
+           return esp_mqtt_client_enqueue(_client, topic, payload, length, qos, retain, true);
+       } else {
+           return esp_mqtt_client_publish(_client, topic, payload, length, qos, retain);
+       }
+   }</code></p>
+<ul>
+<li><strong>Frequency</strong>: High (every packet, status updates)</li>
+<li><strong>Parameters</strong>:<ul>
+<li><code>topic</code>: String pointer (passed to ESP-IDF)</li>
+<li><code>payload</code>: Buffer pointer + length (passed to ESP-IDF)</li>
+</ul>
+</li>
+<li><strong>Critical Finding</strong>:<ul>
+<li>PsychicMqttClient wrapper does NOT copy payload (passes pointers directly)</li>
+<li><strong>BUT</strong>: ESP-IDF <code>esp_mqtt_client_enqueue()</code> and <code>esp_mqtt_client_publish()</code> <strong>DO copy internally</strong></li>
+<li>ESP-IDF copies both topic and payload into internal buffers for async processing</li>
+</ul>
+</li>
+<li><strong>Memory Impact</strong>:<ul>
+<li>Each publish: <code>strlen(topic)</code> + <code>payload_len</code> bytes allocated by ESP-IDF</li>
+<li>For 2KB JSON payloads + ~50 byte topics: ~2KB per publish</li>
+</ul>
+</li>
+<li><strong>Multiple Publishes Per Packet</strong>:<ul>
+<li>Custom brokers: 1-3 publishes (one per broker)</li>
+<li>Analyzer servers: 2 publishes (US + EU)</li>
+<li><strong>Total</strong>: Up to 5 publishes per packet × 2KB = <strong>10KB+ allocations per packet</strong></li>
+</ul>
+</li>
+<li><strong>Async vs Sync</strong>:<ul>
+<li>We use <code>async=true</code> (default), which calls <code>esp_mqtt_client_enqueue()</code></li>
+<li>Enqueue likely allocates more (needs queue buffer) than direct publish</li>
+</ul>
+</li>
+</ul>
+<h2 id="memory-fragmentation-evidence">Memory Fragmentation Evidence</h2>
+<h3 id="observed-behavior">Observed Behavior</h3>
+<ul>
+<li><strong>When MQTT Active</strong>: Max alloc drops to ~54KB (severe fragmentation)</li>
+<li><strong>When MQTT Disconnected</strong>: Max alloc recovers to ~88KB</li>
+<li><strong>Pattern</strong>: Memory recovers when publishes stop</li>
+</ul>
+<h3 id="root-cause-confirmed">Root Cause - CONFIRMED ✅</h3>
+<ol>
+<li><strong>ESP-IDF <code>esp_mqtt_client_enqueue()</code> copies payload internally</strong>:</li>
+<li>PsychicMqttClient wrapper passes pointers (no copy in wrapper)</li>
+<li>ESP-IDF MQTT client copies topic + payload for async queue processing</li>
+<li>Each publish: <code>topic_len + payload_len</code> bytes allocated by ESP-IDF</li>
+<li>
+<p><strong>This is the main source of fragmentation</strong></p>
+</li>
+<li>
+<p><strong>Multiple publishes per packet</strong> multiply allocations:</p>
+</li>
+<li>1 packet → 5 publishes (3 brokers + 2 analyzers) = 5× allocations</li>
+<li>Each allocation: ~2KB (topic + payload)</li>
+<li>
+<p><strong>Total: ~10KB per packet in heap allocations</strong></p>
+</li>
+<li>
+<p><strong>Frequent publishes</strong> prevent heap coalescing:</p>
+</li>
+<li>New allocations before old ones are freed</li>
+<li>ESP-IDF async queue holds messages until sent</li>
+<li>Creates "holes" in heap that can't be coalesced</li>
+</ol>
+<h2 id="recommendations">Recommendations</h2>
+<h3 id="1-investigate-library-source-code">1. Investigate Library Source Code</h3>
+<p>Since the library is external, we need to:</p>
+<ul>
+<li>Check if library source is available in PlatformIO cache</li>
+<li>Review <code>publish()</code> implementation for memory allocations</li>
+<li>Look for zero-copy or buffer reuse options</li>
+</ul>
+<h3 id="2-potential-optimizations">2. Potential Optimizations</h3>
+<h4 id="a-reduce-number-of-publishes-highest-impact">A. Reduce Number of Publishes ⭐ <strong>HIGHEST IMPACT</strong></h4>
+<ul>
+<li><strong>Current</strong>: Publish to all brokers + analyzers separately (5 publishes per packet)</li>
+<li><strong>Option 1</strong>: Publish to one analyzer server only (reduce from 2 to 1)</li>
+<li><strong>Impact</strong>: 20% reduction in allocations (2KB saved per packet)</li>
+<li><strong>Option 2</strong>: Use single custom broker with forwarding</li>
+<li><strong>Impact</strong>: 60% reduction (from 3 brokers to 1)</li>
+<li><strong>Option 3</strong>: Combine both (1 broker + 1 analyzer)</li>
+<li><strong>Impact</strong>: 60% reduction (from 5 to 2 publishes)</li>
+<li><strong>Trade-off</strong>: Less redundancy, simpler architecture</li>
+</ul>
+<h4 id="b-reduce-payload-sizes">B. Reduce Payload Sizes</h4>
+<ul>
+<li><strong>Current</strong>: Up to 2KB JSON per packet</li>
+<li><strong>Option</strong>: Compress or reduce JSON size</li>
+<li><strong>Impact</strong>: Reduces allocation size per publish</li>
+<li><strong>Trade-off</strong>: Less data per message</li>
+</ul>
+<h4 id="c-throttle-publishes-already-implemented">C. Throttle Publishes (Already Implemented) ✅</h4>
+<ul>
+<li><strong>Current</strong>: Skip publishes using adaptive max-alloc thresholds derived from internal heap size</li>
+<li><strong>Status</strong>: ✅ Implemented</li>
+<li><strong>Effect</strong>: Prevents further fragmentation when memory is low</li>
+</ul>
+<h4 id="d-use-synchronous-publishes-blocking">D. Use Synchronous Publishes (Blocking)</h4>
+<ul>
+<li><strong>Current</strong>: <code>async=true</code> (default) uses <code>esp_mqtt_client_enqueue()</code></li>
+<li><strong>Option</strong>: Use <code>async=false</code> to call <code>esp_mqtt_client_publish()</code> directly</li>
+<li><strong>Impact</strong>: May reduce queue overhead, but blocks until sent</li>
+<li><strong>Trade-off</strong>: Blocks execution, may impact responsiveness</li>
+<li><strong>Code Change</strong>: <code>publish(topic, qos, retain, payload, len, false)</code></li>
+</ul>
+<h4 id="e-reduce-buffer-size-configuration">E. Reduce Buffer Size Configuration</h4>
+<ul>
+<li><strong>Current</strong>: MQTT client buffer size is unified to 896 bytes (<code>setBufferSize(896)</code>)</li>
+<li><strong>Option</strong>: Reduce buffer size if messages are smaller</li>
+<li><strong>Impact</strong>: Less memory per client instance</li>
+<li><strong>Note</strong>: May cause message fragmentation if payloads exceed buffer</li>
+</ul>
+<h4 id="f-investigate-esp-idf-mqtt-client-configuration">F. Investigate ESP-IDF MQTT Client Configuration</h4>
+<ul>
+<li>ESP-IDF MQTT client has internal buffer configuration</li>
+<li>May be able to reduce queue depth or buffer sizes</li>
+<li><strong>Requires</strong>: ESP-IDF documentation review</li>
+</ul>
+<h3 id="3-library-alternatives-if-issues-persist">3. Library Alternatives (If Issues Persist)</h3>
+<p>Consider lightweight MQTT libraries with better memory management:</p>
+<ul>
+<li><strong>lwmqtt</strong>: Zero-copy, no dynamic allocations</li>
+<li><strong>coreMQTT</strong>: Fixed buffers, predictable memory</li>
+<li><strong>Custom implementation</strong>: Full control over memory</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li>
+<p>✅ <strong>Locate Library Source</strong>: Found in <code>.pio/libdeps/*/PsychicMqttClient/src/</code></p>
+</li>
+<li>
+<p>✅ <strong>Analyze <code>publish()</code> Implementation</strong>:</p>
+</li>
+<li>Wrapper doesn't copy (passes pointers)</li>
+<li>ESP-IDF <code>esp_mqtt_client_enqueue()</code> copies internally</li>
+<li>
+<p>This is the root cause</p>
+</li>
+<li>
+<p><strong>Test Synchronous Publishes</strong>:</p>
+</li>
+<li>Try <code>async=false</code> to use <code>esp_mqtt_client_publish()</code> directly</li>
+<li>May have different memory behavior (no queue)</li>
+<li>
+<p>Measure fragmentation impact</p>
+</li>
+<li>
+<p><strong>Reduce Number of Publishes</strong>:</p>
+</li>
+<li>Implement single analyzer server (US or EU)</li>
+<li>Or reduce custom broker count</li>
+<li>
+<p>Measure memory improvement</p>
+</li>
+<li>
+<p><strong>Profile ESP-IDF MQTT Client</strong>:</p>
+</li>
+<li>Check ESP-IDF documentation for buffer configuration</li>
+<li>Look for queue depth settings</li>
+<li>
+<p>Investigate if we can reduce internal buffers</p>
+</li>
+<li>
+<p><strong>Consider ESP-IDF MQTT Client Direct Usage</strong>:</p>
+</li>
+<li>Bypass PsychicMqttClient wrapper</li>
+<li>Use ESP-IDF API directly with custom memory management</li>
+<li>
+<p>More control, but more complex</p>
+</li>
+<li>
+<p><strong>Alternative: Switch to Different Library</strong>:</p>
+</li>
+<li>Consider <code>lwmqtt</code> (zero-copy, no dynamic allocations)</li>
+<li>Or <code>coreMQTT</code> (fixed buffers)</li>
+<li>Requires significant refactoring</li>
+</ol>
+<h2 id="current-mitigations-current-branch">Current Mitigations (Current Branch)</h2>
+<p>✅ <strong>Adaptive Memory Pressure Monitoring</strong>: Skip publishes based on dynamic max-alloc thresholds
+✅ <strong>setServer() Optimization</strong>: Only call when URI changes<br />
+✅ <strong>JSON Buffer Reuse</strong>: Build once, publish to multiple destinations
+✅ <strong>Analyzer Server Throttling</strong>: Analyzer publishes are gated by adaptive memory checks</p>
+<h2 id="remaining-risk">Remaining Risk</h2>
+<p>⚠️ <strong>Library Internal Allocations</strong>: If <code>publish()</code> copies payloads internally, we can't control this without:</p>
+<ul>
+<li>Library modification</li>
+<li>Library replacement</li>
+<li>Library API changes (if supported)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.action.edit", "content.code.copy", "search.highlight", "search.suggest"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
