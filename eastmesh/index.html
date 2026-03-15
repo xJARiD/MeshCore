@@ -27,7 +27,7 @@
     
     
       
-        <title>EastMesh MQTT Setup (Heltec V4) - MeshCore Docs</title>
+        <title>EastMesh MQTT Setup (Heltec V3/V4) - MeshCore Docs</title>
       
     
     
@@ -70,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#eastmesh-mqtt-setup-heltec-v4" class="md-skip">
+        <a href="#eastmesh-mqtt-setup-heltec-v3v4" class="md-skip">
           Skip to content
         </a>
       
@@ -105,7 +105,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              EastMesh MQTT Setup (Heltec V4)
+              EastMesh MQTT Setup (Heltec V3/V4)
             
           </span>
         </div>
@@ -539,7 +539,7 @@
   <span class="md-ellipsis">
     
   
-    EastMesh MQTT Setup (Heltec V4)
+    EastMesh MQTT Setup (Heltec V3/V4)
   
 
     
@@ -557,7 +557,7 @@
   <span class="md-ellipsis">
     
   
-    EastMesh MQTT Setup (Heltec V4)
+    EastMesh MQTT Setup (Heltec V3/V4)
   
 
     
@@ -945,12 +945,21 @@
   
 
 
-<h1 id="eastmesh-mqtt-setup-heltec-v4">EastMesh MQTT Setup (Heltec V4)</h1>
-<p>Known-good configuration for <code>heltec_v4_repeater_observer_mqtt</code>.</p>
-<h2 id="build-defaults">Build Defaults</h2>
-<p>Configured in <code>variants/heltec_v4/platformio.ini</code>:</p>
+<h1 id="eastmesh-mqtt-setup-heltec-v3v4">EastMesh MQTT Setup (Heltec V3/V4)</h1>
+<p>Known-good configuration for:</p>
 <ul>
-<li><code>MQTT_SERVER="wss://mqtt2.eastmesh.au:443"</code></li>
+<li><code>Heltec_v3_repeater_observer_mqtt</code></li>
+<li><code>heltec_v4_repeater_observer_mqtt</code></li>
+</ul>
+<h2 id="build-defaults">Build Defaults</h2>
+<p>Configured in:</p>
+<ul>
+<li><code>variants/heltec_v3/platformio.ini</code></li>
+<li><code>variants/heltec_v4/platformio.ini</code></li>
+</ul>
+<p>Shared MQTT build flags used by both environments:</p>
+<ul>
+<li><code>MQTT_SERVER="wss://mqtt2.eastmesh.au"</code></li>
 <li><code>MQTT_PORT=443</code></li>
 <li><code>MQTT_PASSWORD="jwt"</code> (enables JWT auth mode)</li>
 <li><code>MQTT_AUDIENCE="mqtt2.eastmesh.au"</code></li>
@@ -960,18 +969,27 @@
 </ul>
 <p>Notes:</p>
 <ul>
-<li>JWT signature conversion to standard base64url was removed; custom broker auth works with the original token signature format used by <code>JWTHelper</code>.</li>
 <li><code>MQTT_DEBUG</code>, <code>MESH_PACKET_LOGGING</code>, and <code>MESH_DEBUG</code> are disabled by default for cleaner production logs.</li>
+<li>V3 also sets <code>ESP32_CPU_FREQ=160</code> in <code>Heltec_v3_repeater_observer_mqtt</code>.</li>
+<li>JWT signature conversion to standard base64url was removed; custom broker auth works with the original token signature format used by <code>JWTHelper</code>.</li>
 </ul>
 <h2 id="flash">Flash</h2>
+<p>Find PORT</p>
+<pre><code class="language-bash">poetry run pio device list
+</code></pre>
+<p>Flash V3</p>
+<pre><code class="language-bash">poetry run pio run -e Heltec_v3_repeater_observer_mqtt -t upload --upload-port &lt;PORT&gt;
+</code></pre>
+<p>Flash V4</p>
 <pre><code class="language-bash">poetry run pio run -e heltec_v4_repeater_observer_mqtt -t upload --upload-port &lt;PORT&gt;
 </code></pre>
 <h2 id="runtime-commands">Runtime Commands</h2>
-<p>Use these from CLI if needed:</p>
+<p>Use these from the CLI if needed:</p>
 <pre><code class="language-text">set mqtt.server wss://mqtt2.eastmesh.au:443
 set mqtt.port 443
 set mqtt.password jwt
 </code></pre>
+<p>NOTE: Do <strong>NOT</strong> set mqtt.username!</p>
 <p>Optional analyzer servers:</p>
 <pre><code class="language-text">set mqtt.analyzer.us on
 set mqtt.analyzer.eu on
@@ -979,6 +997,9 @@ set mqtt.analyzer.eu on
 <p>or disable:</p>
 <pre><code class="language-text">set mqtt.analyzer.us off
 set mqtt.analyzer.eu off
+</code></pre>
+<p>Strongly recommend disabling one of the LetsMesh analyzer servers. Keeping EastMesh plus both LetsMesh analyzers enabled at the same time uses noticeably more memory.</p>
+<pre><code class="language-text">set mqtt.analyzer.us off
 </code></pre>
 <h2 id="verify">Verify</h2>
 <p>Expected connection logs include:</p>
