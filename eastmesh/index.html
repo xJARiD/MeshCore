@@ -594,6 +594,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#platform-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1104,6 +1115,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#platform-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1391,12 +1413,35 @@
 <li>verifying that the device is connected</li>
 <li>working around a known first-flash config issue</li>
 </ul>
+<p>For broader MQTT bridge behavior and command reference, see <a href="../MQTT_IMPLEMENTATION/">MQTT Bridge Implementation</a>.</p>
 <h2 id="what-you-need">What You Need</h2>
 <ul>
 <li>a Heltec V3 or Heltec V4 board</li>
 <li>a USB data cable</li>
 <li>WiFi credentials for the network the device will use</li>
 <li>this repo checked out locally</li>
+</ul>
+<h2 id="scope">Scope</h2>
+<p>This guide is written for Heltec V3 and Heltec V4 because those are the known working EastMesh setups.</p>
+<p>All preconfigured <code>*_repeater_observer_mqtt</code> PlatformIO environments now include the EastMesh MQTT defaults.</p>
+<p>Only Heltec V3 and Heltec V4 have been fully tested with EastMesh so far.</p>
+<p>The same overall process should also work on the other boards listed below, but those EastMesh configurations have not been fully validated yet.</p>
+<p>Preconfigured observer-MQTT environments currently exist for:</p>
+<ul>
+<li><code>Heltec_v3_repeater_observer_mqtt</code></li>
+<li><code>heltec_v4_repeater_observer_mqtt</code></li>
+<li><code>Heltec_T190_repeater_observer_mqtt</code></li>
+<li><code>LilyGo_T3S3_sx1262_repeater_observer_mqtt</code></li>
+<li><code>Tbeam_SX1262_repeater_observer_mqtt</code></li>
+<li><code>Tbeam_SX1276_repeater_observer_mqtt</code></li>
+<li><code>T_Beam_S3_Supreme_SX1262_repeater_observer_mqtt</code></li>
+<li><code>Station_G2_repeater_observer_mqtt</code></li>
+<li><code>Xiao_S3_WIO_repeater_observer_mqtt</code></li>
+</ul>
+<p>CI note:</p>
+<ul>
+<li>the current PR build matrix covers standard repeater builds on several platforms</li>
+<li>the observer-MQTT environments are not currently built in CI</li>
 </ul>
 <h2 id="platform-notes">Platform Notes</h2>
 <h3 id="macos-linux">macOS / Linux</h3>
@@ -1466,7 +1511,7 @@ py -m pipx ensurepath
 </code></pre>
 <p>Replace <code>&lt;PORT&gt;</code> with the value from <code>poetry run pio device list</code>.</p>
 <h2 id="built-in-eastmesh-defaults">Built-In EastMesh Defaults</h2>
-<p>Both observer builds include these EastMesh MQTT defaults:</p>
+<p>All preconfigured observer-MQTT builds include these EastMesh MQTT defaults:</p>
 <ul>
 <li><code>MQTT_SERVER="wss://mqtt2.eastmesh.au"</code></li>
 <li><code>MQTT_PORT=443</code></li>
@@ -1493,6 +1538,7 @@ py -m pipx ensurepath
 <li>the repeater console from another MeshCore device</li>
 </ul>
 <p>The commands below work from either interface unless otherwise noted.</p>
+<p>For the general console flow, see the quick start section in <a href="../MQTT_IMPLEMENTATION/#quick-start-guide">MQTT Bridge Implementation</a>.</p>
 <h2 id="step-7-configure-wifi">Step 7: Configure WiFi</h2>
 <p>Set your WiFi credentials:</p>
 <pre><code class="language-text">set wifi.ssid YourWiFiNetwork
@@ -1507,6 +1553,7 @@ get wifi.powersave
 <p>If you want better WiFi performance and do not care about power saving, try:</p>
 <pre><code class="language-text">set wifi.powersave none
 </code></pre>
+<p>Additional WiFi command reference is documented in <a href="../MQTT_IMPLEMENTATION/#step-3-configure-wifi-connection">MQTT Bridge Implementation</a>.</p>
 <h2 id="step-8-verify-or-repair-mqtt-settings">Step 8: Verify or Repair MQTT Settings</h2>
 <p>Check the live MQTT settings:</p>
 <pre><code class="language-text">get mqtt.server
@@ -1534,6 +1581,7 @@ get mqtt.port
 get mqtt.password
 get mqtt.config.valid
 </code></pre>
+<p>For the broader MQTT command set, see <a href="../MQTT_IMPLEMENTATION/#step-6-configure-mqtt-settings">MQTT Bridge Implementation</a>.</p>
 <h2 id="step-9-optional-analyzer-settings">Step 9: Optional Analyzer Settings</h2>
 <p>You can also publish to the Let's Mesh analyzers:</p>
 <pre><code class="language-text">set mqtt.analyzer.us on
@@ -1547,6 +1595,7 @@ set mqtt.analyzer.eu off
 <p>For example:</p>
 <pre><code class="language-text">set mqtt.analyzer.us off
 </code></pre>
+<p>Background on the Let's Mesh analyzer integration is in <a href="../MQTT_IMPLEMENTATION/#lets-mesh-analyzer-integration">MQTT Bridge Implementation</a>.</p>
 <h2 id="step-10-reboot">Step 10: Reboot</h2>
 <p>After changing WiFi or MQTT settings, reboot the device:</p>
 <pre><code class="language-text">reboot
@@ -1576,6 +1625,7 @@ set mqtt.analyzer.eu off
 <li>Re-apply the EastMesh values manually if needed</li>
 <li>Run <code>reboot</code></li>
 </ol>
+<p>For additional troubleshooting context, see <a href="../MQTT_IMPLEMENTATION/">MQTT Bridge Implementation</a>.</p>
 
 
 
