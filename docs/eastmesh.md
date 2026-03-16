@@ -399,3 +399,4 @@ Additional community-maintained documentation is also available at these unoffic
 
 - `https://wiki.meshcoreaus.org/`
 - `https://wiki.eastmesh.au/`
+- `https://nswmesh.au/`
