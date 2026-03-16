@@ -755,6 +755,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#optional-build-bin-files-for-web-flasher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional: Build .bin Files for Web Flasher
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#built-in-eastmesh-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1337,6 +1348,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#optional-build-bin-files-for-web-flasher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optional: Build .bin Files for Web Flasher
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#built-in-eastmesh-defaults" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1656,6 +1678,35 @@ poetry install
 <pre><code class="language-bash">poetry run pio run -e heltec_v4_repeater_observer_mqtt -t upload --upload-port &lt;PORT&gt;
 </code></pre>
 <p>Replace <code>&lt;PORT&gt;</code> with the value from <code>poetry run pio device list</code>.</p>
+<h2 id="optional-build-bin-files-for-web-flasher">Optional: Build <code>.bin</code> Files for Web Flasher</h2>
+<p>This is mainly for macOS/Linux users using <code>build.sh</code>.</p>
+<p>Set a firmware version first:</p>
+<pre><code class="language-bash">export FIRMWARE_VERSION=1.14.0 #or whatever the latest firmware version is
+</code></pre>
+<p>Then build the observer-MQTT target you want:</p>
+<pre><code class="language-bash">sh build.sh build-firmware Heltec_v3_repeater_observer_mqtt
+</code></pre>
+<p>or:</p>
+<pre><code class="language-bash">sh build.sh build-firmware heltec_v4_repeater_observer_mqtt
+</code></pre>
+<p>You can also substitute any other preconfigured <code>*_repeater_observer_mqtt</code> environment listed earlier in this guide.</p>
+<p>The generated files will appear in the <code>out</code> folder.</p>
+<p>For ESP32 targets, <code>build.sh</code> produces:</p>
+<ul>
+<li><code>&lt;env&gt;-&lt;version&gt;-&lt;sha&gt;.bin</code></li>
+<li><code>&lt;env&gt;-&lt;version&gt;-&lt;sha&gt;-merged.bin</code></li>
+</ul>
+<p>You can then open:</p>
+<ul>
+<li><code>https://flasher.meshcore.co.uk/</code></li>
+<li><code>https://flasher.meshcoreaus.org/</code></li>
+</ul>
+<p>and flash using <code>Custom firmware</code>.</p>
+<p>Use:</p>
+<ul>
+<li>the normal <code>.bin</code> file for a standard flash</li>
+<li>the <code>-merged.bin</code> file when doing an erase + flash</li>
+</ul>
 <h2 id="built-in-eastmesh-defaults">Built-In EastMesh Defaults</h2>
 <p>All preconfigured observer-MQTT builds include these EastMesh MQTT defaults:</p>
 <ul>
