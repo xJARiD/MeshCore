@@ -59,7 +59,7 @@ bool JWTHelper::createAuthToken(
   
   // Convert to uppercase
   for (int i = 0; publicKeyHex[i]; i++) {
-    publicKeyHex[i] = toupper(publicKeyHex[i]);
+    publicKeyHex[i] = toupper((unsigned char)publicKeyHex[i]);
   }
   
   Serial.printf("JWTHelper: Public key hex: %s (length: %d)\n", publicKeyHex, (int)strlen(publicKeyHex));
@@ -171,6 +171,7 @@ size_t JWTHelper::base64UrlEncode(const uint8_t* input, size_t inputLen, char* o
     return 0;
   }
   
+  output[outlen] = '\0';
   Serial.printf("JWTHelper: mbedtls_base64_encode result: %s (outlen: %d)\n", output, (int)outlen);
   
   // Convert to base64 URL format in-place (replace + with -, / with _, remove padding =)
@@ -342,122 +343,150 @@ bool JWTHelper::verifyToken(
   unsigned long* issued_at,
   unsigned long* expires_at
 ) {
+  bool ok = false;
+  const char* dot1 = nullptr;
+  const char* dot2 = nullptr;
+  const char* pubkey_str = nullptr;
+  size_t headerLen = 0;
+  size_t payloadLen = 0;
+  size_t signatureLen = 0;
+  size_t headerDecodedLen = 0;
+  size_t payloadDecodedLen = 0;
+  size_t pubkey_len = 0;
+  size_t sigDecodedLen = 0;
+  size_t signingInputLen = 0;
+  bool is_hex = false;
+  bool looks_like_hex = false;
+  char* header_b64 = nullptr;
+  char* header = nullptr;
+  char* payload_b64 = nullptr;
+  char* payload = nullptr;
+  DynamicJsonDocument* doc = nullptr;
+  DeserializationError error;
+  uint8_t* pubkey_bytes = nullptr;
+  char* sig_encoded = nullptr;
+  uint8_t* signature = nullptr;
+  char* signingInput = nullptr;
+  int verify_result = 0;
+
   Serial.printf("JWTHelper::verifyToken: Starting\n");
   
   if (!token || !extracted_public_key || extracted_key_size < 65) {
     Serial.printf("JWTHelper::verifyToken: Invalid parameters\n");
-    return false;
+    goto cleanup;
   }
   
   // Parse token: header.payload.signature
-  const char* dot1 = strchr(token, '.');
+  dot1 = strchr(token, '.');
   if (!dot1) {
     Serial.printf("JWTHelper::verifyToken: No first dot\n");
-    return false;
+    goto cleanup;
   }
   
-  const char* dot2 = strchr(dot1 + 1, '.');
+  dot2 = strchr(dot1 + 1, '.');
   if (!dot2) {
     Serial.printf("JWTHelper::verifyToken: No second dot\n");
-    return false;
+    goto cleanup;
   }
   
-  size_t headerLen = dot1 - token;
-  size_t payloadLen = dot2 - (dot1 + 1);
-  size_t signatureLen = strlen(dot2 + 1);
+  headerLen = dot1 - token;
+  payloadLen = dot2 - (dot1 + 1);
+  signatureLen = strlen(dot2 + 1);
   
   Serial.printf("JWTHelper::verifyToken: headerLen=%u, payloadLen=%u, signatureLen=%u\n", 
                 headerLen, payloadLen, signatureLen);
   
   // Decode header - extract header part first (before first dot)
   // Use heap allocation to reduce stack usage
-  char* header_b64 = (char*)malloc(headerLen + 1);
+  header_b64 = (char*)malloc(headerLen + 1);
   if (!header_b64) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate header_b64\n");
-    return false;
+    goto cleanup;
   }
   memcpy(header_b64, token, headerLen);
   header_b64[headerLen] = '\0';
   
-  char* header = (char*)malloc(128);
+  header = (char*)malloc(129);
   if (!header) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate header\n");
-    free(header_b64);
-    return false;
+    goto cleanup;
   }
-  size_t headerDecodedLen = base64UrlDecode(header_b64, (uint8_t*)header, 128);
-  free(header_b64);  // Free immediately after use
+  headerDecodedLen = base64UrlDecode(header_b64, (uint8_t*)header, 128);
+  free(header_b64);
+  header_b64 = nullptr;
   if (headerDecodedLen == 0) {
     Serial.printf("JWTHelper::verifyToken: Header decode failed\n");
-    free(header);
-    return false;
+    goto cleanup;
+  }
+  if (headerDecodedLen >= 129) {
+    Serial.printf("JWTHelper::verifyToken: Header decode overflow (%u bytes)\n", headerDecodedLen);
+    goto cleanup;
   }
   header[headerDecodedLen] = '\0';
   Serial.printf("JWTHelper::verifyToken: Header decoded: %s\n", header);
-  free(header);  // Free header immediately after logging
+  free(header);
+  header = nullptr;
   
   // Decode payload - extract payload part first (between first and second dot)
   // Need to extract just the payload portion since base64UrlDecode uses strlen()
-  char* payload_b64 = (char*)malloc(payloadLen + 1);
+  payload_b64 = (char*)malloc(payloadLen + 1);
   if (!payload_b64) {
     Serial.printf("JWTHelper::verifyToken: Malloc failed for payload_b64\n");
-    return false;
+    goto cleanup;
   }
   memcpy(payload_b64, dot1 + 1, payloadLen);
   payload_b64[payloadLen] = '\0';
   
   // Decode payload - use heap allocation to reduce stack usage
-  char* payload = (char*)malloc(512);
+  payload = (char*)malloc(513);
   if (!payload) {
     Serial.printf("JWTHelper::verifyToken: Malloc failed for payload\n");
-    free(payload_b64);
-    return false;
+    goto cleanup;
   }
-  size_t payloadDecodedLen = base64UrlDecode(payload_b64, (uint8_t*)payload, 512);
+  payloadDecodedLen = base64UrlDecode(payload_b64, (uint8_t*)payload, 512);
   if (payloadDecodedLen == 0) {
     Serial.printf("JWTHelper::verifyToken: Payload decode failed (payload_b64 len: %u)\n", payloadLen);
-    free(payload_b64);
-    free(payload);
-    return false;
+    goto cleanup;
+  }
+  if (payloadDecodedLen >= 513) {
+    Serial.printf("JWTHelper::verifyToken: Payload decode overflow (%u bytes)\n", payloadDecodedLen);
+    goto cleanup;
   }
   payload[payloadDecodedLen] = '\0';
   Serial.printf("JWTHelper::verifyToken: Payload decoded, len=%u: %.200s\n", payloadDecodedLen, payload);
   
-  free(payload_b64);  // Free the base64 payload buffer
+  free(payload_b64);
+  payload_b64 = nullptr;
   
   // Parse payload JSON - use heap allocation to avoid stack overflow in MQTT task
   // MQTT task has limited stack space, so we must use heap for large buffers
-  DynamicJsonDocument* doc = new DynamicJsonDocument(512);
+  doc = new DynamicJsonDocument(512);
   if (!doc) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate JSON document\n");
-    free(payload);
-    return false;
+    goto cleanup;
   }
-  DeserializationError error = deserializeJson(*doc, payload);
-  free(payload);  // Free immediately after parsing
+  error = deserializeJson(*doc, payload);
+  free(payload);
+  payload = nullptr;
   if (error) {
     Serial.printf("JWTHelper::verifyToken: JSON parse error: %s\n", error.c_str());
-    delete doc;
-    return false;
+    goto cleanup;
   }
   
   // Extract public key
   if (!doc->containsKey("publicKey")) {
     Serial.printf("JWTHelper::verifyToken: Missing publicKey\n");
-    delete doc;
-    return false;
+    goto cleanup;
   }
-  const char* pubkey_str = (*doc)["publicKey"];
+  pubkey_str = (*doc)["publicKey"];
   if (!pubkey_str) {
     Serial.printf("JWTHelper::verifyToken: publicKey is null\n");
-    delete doc;
-    return false;
+    goto cleanup;
   }
-  size_t pubkey_len = strlen(pubkey_str);
+  pubkey_len = strlen(pubkey_str);
   if (pubkey_len != 64) {
     Serial.printf("JWTHelper::verifyToken: publicKey length=%u (expected 64)\n", pubkey_len);
-    delete doc;
-    return false;
+    goto cleanup;
   }
   strncpy(extracted_public_key, pubkey_str, extracted_key_size - 1);
   extracted_public_key[extracted_key_size - 1] = '\0';
@@ -488,25 +517,25 @@ bool JWTHelper::verifyToken(
   
   // Free JSON document immediately after extracting all needed data
   delete doc;
+  doc = nullptr;
   
   // Check expiration if present
   if (expires_at && *expires_at > 0) {
     unsigned long current_time = time(nullptr);
     if (current_time > 0 && current_time >= *expires_at) {
-      return false;  // Token expired
+      goto cleanup;
     }
   }
   
   // Convert extracted public key to bytes - use heap allocation to reduce stack usage
-  uint8_t* pubkey_bytes = (uint8_t*)malloc(PUB_KEY_SIZE);
+  pubkey_bytes = (uint8_t*)malloc(PUB_KEY_SIZE);
   if (!pubkey_bytes) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate pubkey_bytes\n");
-    return false;
+    goto cleanup;
   }
   if (!mesh::Utils::fromHex(pubkey_bytes, PUB_KEY_SIZE, extracted_public_key)) {
     Serial.printf("JWTHelper::verifyToken: Failed to convert public key from hex\n");
-    free(pubkey_bytes);
-    return false;
+    goto cleanup;
   }
   Serial.printf("JWTHelper::verifyToken: Public key converted to bytes\n");
   
@@ -514,34 +543,30 @@ bool JWTHelper::verifyToken(
   if (expected_public_key && key_len == PUB_KEY_SIZE) {
     if (memcmp(pubkey_bytes, expected_public_key, PUB_KEY_SIZE) != 0) {
       Serial.printf("JWTHelper::verifyToken: Public key mismatch\n");
-      free(pubkey_bytes);
-      return false;
+      goto cleanup;
     }
   }
   
   // Decode signature - extract signature part first
   // Use heap allocation to reduce stack usage
   // Signature can be either base64url-encoded (86-88 chars) or hex-encoded (128 chars for 64 bytes)
-  char* sig_encoded = (char*)malloc(signatureLen + 1);
+  sig_encoded = (char*)malloc(signatureLen + 1);
   if (!sig_encoded) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate sig_encoded\n");
-    return false;
+    goto cleanup;
   }
   memcpy(sig_encoded, dot2 + 1, signatureLen);
   sig_encoded[signatureLen] = '\0';
   Serial.printf("JWTHelper::verifyToken: Extracted signature (len=%u): %s\n", signatureLen, sig_encoded);
   
-  uint8_t* signature = (uint8_t*)malloc(64);
+  signature = (uint8_t*)malloc(64);
   if (!signature) {
     Serial.printf("JWTHelper::verifyToken: Failed to allocate signature buffer\n");
-    free(sig_encoded);
-    return false;
+    goto cleanup;
   }
-  size_t sigDecodedLen = 0;
-  
   // Check if signature is hex-encoded (128 hex chars = 64 bytes) or base64url-encoded (86-88 chars)
-  bool is_hex = (signatureLen == 128);  // 64 bytes * 2 = 128 hex chars
-  bool looks_like_hex = true;
+  is_hex = (signatureLen == 128);  // 64 bytes * 2 = 128 hex chars
+  looks_like_hex = true;
   if (is_hex) {
     // Verify it's all hex characters
     for (size_t i = 0; i < signatureLen; i++) {
@@ -560,10 +585,7 @@ bool JWTHelper::verifyToken(
     Serial.printf("JWTHelper::verifyToken: Signature appears to be hex-encoded\n");
     if (!mesh::Utils::fromHex(signature, 64, sig_encoded)) {
       Serial.printf("JWTHelper::verifyToken: Hex signature decode failed\n");
-      free(sig_encoded);
-      free(signature);
-      free(pubkey_bytes);
-      return false;
+      goto cleanup;
     }
     sigDecodedLen = 64;
   } else {
@@ -574,30 +596,26 @@ bool JWTHelper::verifyToken(
       Serial.printf("JWTHelper::verifyToken: Base64url signature decode failed, got %u bytes (expected 64, sig_encoded len: %u)\n", 
                     sigDecodedLen, signatureLen);
       Serial.printf("JWTHelper::verifyToken: Signature string: %s\n", sig_encoded);
-      free(sig_encoded);
-      free(signature);
-      free(pubkey_bytes);
-      return false;
+      goto cleanup;
     }
   }
   
-  free(sig_encoded);  // Free immediately after decoding
+  free(sig_encoded);
+  sig_encoded = nullptr;
   
   Serial.printf("JWTHelper::verifyToken: Signature decoded successfully (%u bytes)\n", sigDecodedLen);
   
   // Create signing input: header.payload
   // Use heap allocation to reduce stack usage
-  size_t signingInputLen = headerLen + 1 + payloadLen;
+  signingInputLen = headerLen + 1 + payloadLen;
   if (signingInputLen >= 1024) {
     Serial.printf("JWTHelper: Signing input too large: %u bytes\n", signingInputLen);
-    free(pubkey_bytes);
-    return false;  // Signing input too large
+    goto cleanup;
   }
-  char* signingInput = (char*)malloc(signingInputLen + 1);
+  signingInput = (char*)malloc(signingInputLen + 1);
   if (!signingInput) {
     Serial.printf("JWTHelper: Failed to allocate signing input buffer\n");
-    free(pubkey_bytes);
-    return false;
+    goto cleanup;
   }
   
   memcpy(signingInput, token, headerLen);
@@ -613,18 +631,25 @@ bool JWTHelper::verifyToken(
   yield();  // Feed watchdog before verification
 #endif
   
-  int verify_result = ed25519_verify(signature, (const unsigned char*)signingInput, signingInputLen, pubkey_bytes);
+  verify_result = ed25519_verify(signature, (const unsigned char*)signingInput, signingInputLen, pubkey_bytes);
   
 #ifdef ESP_PLATFORM
   yield();  // Feed watchdog after verification
 #endif
   
   Serial.printf("JWTHelper: ed25519_verify result: %d (1=success, 0=fail)\n", verify_result);
-  
-  // Free all allocated buffers
-  free(signingInput);  // Free signing input buffer
-  free(signature);     // Free signature buffer
-  free(pubkey_bytes); // Free public key buffer
-  
-  return (verify_result == 1);
+
+  ok = (verify_result == 1);
+
+cleanup:
+  free(signingInput);
+  free(signature);
+  free(sig_encoded);
+  free(pubkey_bytes);
+  delete doc;
+  free(payload);
+  free(payload_b64);
+  free(header);
+  free(header_b64);
+  return ok;
 }

@@ -2549,6 +2549,7 @@ void MQTTBridge::setupAnalyzerClients() {
   }
 
   if (!_analyzer_us_enabled && !_analyzer_eu_enabled) {
+    _cached_has_analyzer_servers = false;
     MQTT_DEBUG_PRINTLN("No analyzer servers enabled, skipping PsychicMqttClient setup");
     return;
   }
