@@ -1815,6 +1815,17 @@ set mqtt.analyzer.eu off
 <p>For example:</p>
 <pre><code class="language-text">set mqtt.analyzer.us off
 </code></pre>
+<p>Visibility note:</p>
+<ul>
+<li>if your repeater does not have nearby neighbours, or there is no other MQTT-connected repeater nearby to hear and forward your packets, switch the bridge source to TX so the repeater uplinks its own transmitted adverts</li>
+<li>this helps isolated repeaters show up on both Let's Mesh and EastMesh</li>
+</ul>
+<p>Commands:</p>
+<pre><code class="language-text">set bridge.source tx
+set mqtt.tx on
+reboot
+</code></pre>
+<p>If you do have nearby mesh neighbours or another MQTT-connected repeater hearing you reliably, keep the default RX-oriented setup to avoid uplinking your own transmitted packets unnecessarily.</p>
 <p>Background on the Let's Mesh analyzer integration is in <a href="../MQTT_IMPLEMENTATION/#lets-mesh-analyzer-integration">MQTT Bridge Implementation</a>.</p>
 <h2 id="step-11-reboot">Step 11: Reboot</h2>
 <p>After changing WiFi or MQTT settings, reboot the device:</p>
