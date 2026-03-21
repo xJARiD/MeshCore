@@ -30,6 +30,10 @@
 
 #ifdef WITH_MQTT_BRIDGE
 
+#ifndef MQTT_PACKET_QUEUE_SIZE
+#define MQTT_PACKET_QUEUE_SIZE 20
+#endif
+
 /**
  * @brief Bridge implementation using MQTT protocol for packet transport
  *
@@ -103,7 +107,7 @@ private:
     bool has_raw_data;
   };
   
-  static const int MAX_QUEUE_SIZE = 10;
+  static const int MAX_QUEUE_SIZE = MQTT_PACKET_QUEUE_SIZE;
   
   // FreeRTOS queue for thread-safe packet queuing
   #ifdef ESP_PLATFORM

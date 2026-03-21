@@ -16,3 +16,6 @@ cmake-*
 compile_commands.json
 .venv/
 venv/
+
+# serial_capture
+serial_capture.txt

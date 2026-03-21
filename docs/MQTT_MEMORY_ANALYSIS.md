@@ -1,6 +1,7 @@
 # MQTT Library Memory Analysis
 
 ## Library Information
+
 - **Library**: `elims/PsychicMqttClient@^0.2.4`
 - **Type**: External PlatformIO library (wrapper around ESP-IDF MQTT client)
 - **Platform**: ESP32
@@ -13,14 +14,17 @@
 ### Memory Allocation Points
 
 1. **Client Instance Creation**
+
    ```cpp
    _mqtt_client = new PsychicMqttClient();  // Heap allocation
    _analyzer_us_client = new PsychicMqttClient();  // Heap allocation
    _analyzer_eu_client = new PsychicMqttClient();  // Heap allocation
    ```
+
    - **Impact**: 3 instances × ~few KB each = ~10-15KB base memory
 
 2. **setServer() Calls** ✅ **OPTIMIZED - NO ALLOCATION IN WRAPPER**
+
    ```cpp
    // From PsychicMqttClient.cpp line 215-223
    PsychicMqttClient &setServer(const char *uri) {
@@ -28,12 +32,14 @@
        return *this;
    }
    ```
+
    - **Finding**: Wrapper does NOT copy URI (just stores pointer)
    - **Current Optimization**: We only call `setServer()` when URI changes (using static tracking) ✅
    - **ESP-IDF Behavior**: When `connect()` is called, ESP-IDF likely copies the URI internally
    - **Impact**: Minimal (only on connection, not per publish)
 
 3. **setCredentials() Calls** ✅ **NO ALLOCATION IN WRAPPER**
+
    ```cpp
    // From PsychicMqttClient.cpp line 166-178
    PsychicMqttClient &setCredentials(const char *username, const char *password) {
@@ -42,12 +48,14 @@
        return *this;
    }
    ```
+
    - **Finding**: Wrapper does NOT copy credentials (just stores pointers)
    - **Frequency**: Once per broker connection
    - **ESP-IDF Behavior**: Likely copies when connecting
    - **Impact**: Minimal (only on connection, not per publish)
 
 4. **publish() Calls** ⚠️ **CONFIRMED MAIN CULPRIT**
+
    ```cpp
    // From PsychicMqttClient.cpp line 370-389
    int publish(const char *topic, int qos, bool retain, const char *payload, int length, bool async)
@@ -59,11 +67,12 @@
        }
    }
    ```
+
    - **Frequency**: High (every packet, status updates)
-   - **Parameters**: 
+   - **Parameters**:
      - `topic`: String pointer (passed to ESP-IDF)
      - `payload`: Buffer pointer + length (passed to ESP-IDF)
-   - **Critical Finding**: 
+   - **Critical Finding**:
      - PsychicMqttClient wrapper does NOT copy payload (passes pointers directly)
      - **BUT**: ESP-IDF `esp_mqtt_client_enqueue()` and `esp_mqtt_client_publish()` **DO copy internally**
      - ESP-IDF copies both topic and payload into internal buffers for async processing
@@ -81,11 +90,13 @@
 ## Memory Fragmentation Evidence
 
 ### Observed Behavior
+
 - **When MQTT Active**: Max alloc drops to ~54KB (severe fragmentation)
 - **When MQTT Disconnected**: Max alloc recovers to ~88KB
 - **Pattern**: Memory recovers when publishes stop
 
 ### Root Cause - CONFIRMED ✅
+
 1. **ESP-IDF `esp_mqtt_client_enqueue()` copies payload internally**:
    - PsychicMqttClient wrapper passes pointers (no copy in wrapper)
    - ESP-IDF MQTT client copies topic + payload for async queue processing
@@ -105,7 +116,9 @@
 ## Recommendations
 
 ### 1. Investigate Library Source Code
+
 Since the library is external, we need to:
+
 - Check if library source is available in PlatformIO cache
 - Review `publish()` implementation for memory allocations
 - Look for zero-copy or buffer reuse options
@@ -113,6 +126,7 @@ Since the library is external, we need to:
 ### 2. Potential Optimizations
 
 #### A. Reduce Number of Publishes ⭐ **HIGHEST IMPACT**
+
 - **Current**: Publish to all brokers + analyzers separately (5 publishes per packet)
 - **Option 1**: Publish to one analyzer server only (reduce from 2 to 1)
   - **Impact**: 20% reduction in allocations (2KB saved per packet)
@@ -123,17 +137,20 @@ Since the library is external, we need to:
 - **Trade-off**: Less redundancy, simpler architecture
 
 #### B. Reduce Payload Sizes
+
 - **Current**: Up to 2KB JSON per packet
 - **Option**: Compress or reduce JSON size
 - **Impact**: Reduces allocation size per publish
 - **Trade-off**: Less data per message
 
 #### C. Throttle Publishes (Already Implemented) ✅
-- **Current**: Skip publishes when Max alloc < 60KB
+
+- **Current**: Skip publishes using adaptive max-alloc thresholds derived from internal heap size
 - **Status**: ✅ Implemented
 - **Effect**: Prevents further fragmentation when memory is low
 
 #### D. Use Synchronous Publishes (Blocking)
+
 - **Current**: `async=true` (default) uses `esp_mqtt_client_enqueue()`
 - **Option**: Use `async=false` to call `esp_mqtt_client_publish()` directly
 - **Impact**: May reduce queue overhead, but blocks until sent
@@ -141,12 +158,14 @@ Since the library is external, we need to:
 - **Code Change**: `publish(topic, qos, retain, payload, len, false)`
 
 #### E. Reduce Buffer Size Configuration
-- **Current**: Default buffer size is 1024 bytes (from `setBufferSize()`)
+
+- **Current**: MQTT client buffer size is unified to 896 bytes (`setBufferSize(896)`)
 - **Option**: Reduce buffer size if messages are smaller
 - **Impact**: Less memory per client instance
 - **Note**: May cause message fragmentation if payloads exceed buffer
 
 #### F. Investigate ESP-IDF MQTT Client Configuration
+
 - ESP-IDF MQTT client has internal buffer configuration
 - May be able to reduce queue depth or buffer sizes
 - **Requires**: ESP-IDF documentation review
@@ -154,6 +173,7 @@ Since the library is external, we need to:
 ### 3. Library Alternatives (If Issues Persist)
 
 Consider lightweight MQTT libraries with better memory management:
+
 - **lwmqtt**: Zero-copy, no dynamic allocations
 - **coreMQTT**: Fixed buffers, predictable memory
 - **Custom implementation**: Full control over memory
@@ -162,7 +182,7 @@ Consider lightweight MQTT libraries with better memory management:
 
 1. ✅ **Locate Library Source**: Found in `.pio/libdeps/*/PsychicMqttClient/src/`
 
-2. ✅ **Analyze `publish()` Implementation**: 
+2. ✅ **Analyze `publish()` Implementation**:
    - Wrapper doesn't copy (passes pointers)
    - ESP-IDF `esp_mqtt_client_enqueue()` copies internally
    - This is the root cause
@@ -192,17 +212,17 @@ Consider lightweight MQTT libraries with better memory management:
    - Or `coreMQTT` (fixed buffers)
    - Requires significant refactoring
 
-## Current Mitigations
+## Current Mitigations (Current Branch)
 
-✅ **Memory Pressure Monitoring**: Skip publishes when fragmented
+✅ **Adaptive Memory Pressure Monitoring**: Skip publishes based on dynamic max-alloc thresholds
 ✅ **setServer() Optimization**: Only call when URI changes  
 ✅ **JSON Buffer Reuse**: Build once, publish to multiple destinations
-✅ **Analyzer Server Throttling**: Skip when memory low
+✅ **Analyzer Server Throttling**: Analyzer publishes are gated by adaptive memory checks
 
 ## Remaining Risk
 
 ⚠️ **Library Internal Allocations**: If `publish()` copies payloads internally, we can't control this without:
+
 - Library modification
 - Library replacement
 - Library API changes (if supported)
-

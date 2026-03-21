@@ -7,14 +7,12 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - 'companion-*'
+      - "companion-*"
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
-
       - name: Clone Repo
         uses: actions/checkout@v4
 

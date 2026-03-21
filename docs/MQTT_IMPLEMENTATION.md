@@ -7,11 +7,13 @@ This document describes the MQTT bridge implementation that allows MeshCore repe
 ### Essential Commands to Get MQTT Repeater Running
 
 **1. Connect to device console via repeater login or serial console (115200 baud)**
+
 ```bash
 # Connect to device via serial
 ```
 
 **2. Configure WiFi Credentials**
+
 ```bash
 set wifi.ssid YourWiFiNetwork
 set wifi.pwd YourWiFiPassword
@@ -20,16 +22,19 @@ set wifi.pwd YourWiFiPassword
 If you wish to upload to the MeshCore Analyzer, also `set mqtt.iata XXX` to a valid IATA airport code
 
 **3. Reboot to Connect to WiFi**
+
 ```bash
 reboot
 ```
 
 **4. Toggle bridge.source to rx**
+
 ```bash
 set bridge.source rx
 ```
 
 **5. Verify Configuration**
+
 ```bash
 get wifi.ssid
 get bridge.enabled
@@ -39,6 +44,7 @@ get mqtt.iata
 ```
 
 **6. Restart Bridge (if needed)**
+
 ```bash
 # Option A: Toggle bridge off then on
 set bridge.enabled off
@@ -49,6 +55,7 @@ reboot
 ```
 
 **That's it!** The device will now:
+
 - Connect to WiFi automatically
 - Start uplinking mesh packets to Let's Mesh Analyzer
 - Publish to both custom MQTT broker and Let's Mesh Analyzer servers
@@ -59,6 +66,7 @@ reboot
 ## Overview
 
 The MQTT bridge implementation provides:
+
 - Multiple MQTT broker support (up to 3 brokers)
 - Automatic reconnection with exponential backoff
 - JSON message formatting for status, packets, and raw data
@@ -68,12 +76,14 @@ The MQTT bridge implementation provides:
 ## Files Added
 
 ### Core Implementation
+
 - `src/helpers/bridges/MQTTBridge.h` - MQTT bridge class definition
 - `src/helpers/bridges/MQTTBridge.cpp` - MQTT bridge implementation
 - `src/helpers/MQTTMessageBuilder.h` - JSON message formatting utilities
 - `src/helpers/MQTTMessageBuilder.cpp` - JSON message formatting implementation
 
 ### Integration
+
 - Updated `examples/simple_repeater/MyMesh.h` - Added MQTT bridge support
 - Updated `examples/simple_repeater/MyMesh.cpp` - Added MQTT bridge integration and raw radio data capture
 - Updated `src/helpers/CommonCLI.h` - Added MQTT, WiFi, and timezone configuration fields
@@ -86,11 +96,13 @@ The MQTT bridge implementation provides:
 To build the MQTT bridge firmware:
 
 ### Heltec V3
+
 ```bash
 pio run -e Heltec_v3_repeater_observer_mqtt
 ```
 
 ### Station G2
+
 ```bash
 pio run -e Station_G2_repeater_observer_mqtt
 ```
@@ -111,6 +123,7 @@ build_flags =
 ```
 
 **Build Flags:**
+
 - `MQTT_SERVER` - MQTT broker hostname
 - `MQTT_PORT` - MQTT broker port (default: 1883)
 - `MQTT_USERNAME` - MQTT username
@@ -123,6 +136,7 @@ build_flags =
 ## Default Configuration
 
 The MQTT bridge comes with the following defaults:
+
 - **Origin**: "MeshCore-Repeater"
 - **IATA**: "SEA"
 - **Status Messages**: Enabled
@@ -144,6 +158,7 @@ The MQTT bridge comes with the following defaults:
 ### MQTT Commands
 
 #### Get Commands
+
 - `get mqtt.origin` - Get device origin name
 - `get mqtt.iata` - Get IATA code
 - `get mqtt.status` - Get status message setting (on/off)
@@ -163,6 +178,7 @@ The MQTT bridge comes with the following defaults:
   - **Note**: Available via serial console only (not via LoRa repeater console)
 
 #### Set Commands
+
 - `set mqtt.origin <name>` - Set device origin name
 - `set mqtt.iata <code>` - Set IATA code
 - `set mqtt.status on|off` - Enable/disable status messages
@@ -182,11 +198,13 @@ The MQTT bridge comes with the following defaults:
 ### WiFi Commands
 
 #### Get Commands
+
 - `get wifi.ssid` - Get WiFi SSID
 - `get wifi.pwd` - Get WiFi password
 - `get wifi.powersave` - Get WiFi power save mode (none/min/max)
 
 #### Set Commands
+
 - `set wifi.ssid <ssid>` - Set WiFi SSID
 - `set wifi.pwd <password>` - Set WiFi password
 - `set wifi.powersave none|min|max` - Set WiFi power save mode
@@ -197,14 +215,17 @@ The MQTT bridge comes with the following defaults:
 ### Timezone Commands
 
 #### Get Commands
+
 - `get timezone` - Get timezone string (e.g., "America/Los_Angeles")
 - `get timezone.offset` - Get timezone offset in hours (-12 to +14)
 
 #### Set Commands
+
 - `set timezone <string>` - Set timezone string (IANA format or abbreviation)
 - `set timezone.offset <offset>` - Set timezone offset in hours (-12 to +14)
 
 #### Supported Timezone Formats
+
 - **IANA strings**: `America/Los_Angeles`, `Europe/London`, `Asia/Tokyo`, etc.
 - **Common abbreviations**: `PDT`, `PST`, `MDT`, `MST`, `CDT`, `CST`, `EDT`, `EST`, `BST`, `GMT`, `CEST`, `CET`
 - **UTC offsets**: `UTC-8`, `UTC+5`, `+5`, `-8`, etc.
@@ -212,10 +233,12 @@ The MQTT bridge comes with the following defaults:
 ### Bridge Commands
 
 #### Get Commands
+
 - `get bridge.source` - Get packet source (rx/tx)
 - `get bridge.enabled` - Get bridge enabled status (on/off)
 
 #### Set Commands
+
 - `set bridge.source rx|tx` - Set packet source (rx for received, tx for transmitted)
 - `set bridge.enabled on|off` - Enable/disable bridge
 
@@ -224,12 +247,16 @@ The MQTT bridge comes with the following defaults:
 The CLI commands are organized into two levels:
 
 ### Bridge Commands (`bridge.*`)
+
 **Low-level bridge control** - These settings apply to all bridge types (MQTT, RS232, ESP-NOW, etc.):
+
 - `bridge.enabled` - Master switch for the entire bridge system
 - `bridge.source` - Controls which packet events to capture (RX vs TX)
 
 ### Bridge-Specific Commands (`mqtt.*`, `wifi.*`, `timezone.*`)
+
 **Implementation-specific settings** - These only apply to the MQTT bridge:
+
 - `mqtt.*` - MQTT broker configuration, message types, and formatting
 - `wifi.*` - WiFi connection settings for MQTT connectivity
 - `timezone.*` - Timezone configuration for accurate timestamps
@@ -241,12 +268,15 @@ This design allows MeshCore to support multiple bridge types simultaneously whil
 The bridge publishes to three main topics with the following structure:
 
 ### Status Topic: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status`
+
 Device connection status and metadata (retained messages).
 
 ### Packets Topic: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets`
+
 Full packet data with RF characteristics and metadata.
 
 ### Raw Topic: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw`
+
 Minimal raw packet data for map integration.
 
 **Note**: `{DEVICE_PUBLIC_KEY}` is the device's public key in hexadecimal format (64 characters).
@@ -254,6 +284,7 @@ Minimal raw packet data for map integration.
 ## JSON Message Formats
 
 ### Status Message
+
 ```json
 {
   "status": "online|offline",
@@ -268,6 +299,7 @@ Minimal raw packet data for map integration.
 ```
 
 ### Packet Message
+
 ```json
 {
   "origin": "MeshCore-HOWL",
@@ -290,6 +322,7 @@ Minimal raw packet data for map integration.
 ```
 
 ### Raw Message
+
 ```json
 {
   "origin": "MeshCore-HOWL",
@@ -303,28 +336,33 @@ Minimal raw packet data for map integration.
 ## Key Features
 
 ### Raw Radio Data Capture
+
 - Captures actual raw radio transmission data (including radio headers)
 - Uses proper MeshCore packet hashing (SHA256-based)
 - Provides accurate SNR/RSSI values from actual radio reception
 - Supports both RX and TX packet uplinking (configurable)
 
 ### Timezone Support
+
 - Full timezone support with automatic DST handling
 - Supports IANA timezone strings, common abbreviations, and UTC offsets
 - Separates local time (for timestamps) and UTC time (for time/date fields)
 - Uses JChristensen/Timezone library for accurate timezone conversions
 
 ### WiFi Configuration
+
 - Runtime WiFi credential management via CLI
 - Persistent storage across reboots
 - Automatic reconnection with exponential backoff
 
 ### NTP Time Synchronization
+
 - Automatic time synchronization with NTP servers
 - Periodic time updates (every hour)
 - Proper UTC system time handling
 
 ### Let's Mesh Analyzer Integration
+
 - **JWT Authentication**: Ed25519-signed tokens for secure MQTT authentication
 - **WebSocket MQTT**: Support for MQTT over WebSocket connections (TLS/SSL)
 - **Dual Server Support**: Both US and EU servers enabled by default
@@ -337,6 +375,7 @@ Minimal raw packet data for map integration.
 ## First-Time Setup
 
 ### Prerequisites
+
 - MeshCore device with MQTT bridge firmware flashed
 - WiFi network credentials
 - MQTT broker (optional - default broker is provided)
@@ -344,24 +383,28 @@ Minimal raw packet data for map integration.
 - MeshCore network access
 
 ### Step 1: Initial Boot and Network Connection
+
 1. **Flash the firmware** to your device using PlatformIO or the build script
 2. **Deploy the device** in your mesh network location
 3. **Ensure WiFi connectivity** - the device will automatically connect to WiFi if credentials are pre-configured
 4. **Verify mesh network access** - device should be discoverable by other mesh nodes
 
 ### Step 2: Connect via LoRa Repeater Console
+
 Use a MeshCore companion device to configure the Repeater's MQTT bridge.
 
 1. **Connect to the mesh** using your companion
 2. **Locate the MQTT bridge device** in your contacts
 3. **Log into your Repeater** using the default password (password) or whatever you configured via serial console
-3. **Tap on the repeater console** on your repeater's settings
-4. **Send configuration commands** via LoRa to the MQTT bridge device
+4. **Tap on the repeater console** on your repeater's settings
+5. **Send configuration commands** via LoRa to the MQTT bridge device
 
 ### Step 3: Configure WiFi Connection
+
 The device needs internet connectivity to publish to MQTT brokers.
 
 **Via LoRa Repeater Console:**
+
 ```
 # Set your WiFi credentials
 set wifi.ssid "YourWiFiNetwork"
@@ -378,9 +421,11 @@ get wifi.powersave
 ```
 
 ### Step 4: Configure Device Identity
+
 Set up your device's identity for MQTT topics and status messages.
 
 **Via LoRa Repeater Console:**
+
 ```
 # Set IATA code for topic structure (e.g., airport code)
 set mqtt.iata "SEA"
@@ -391,6 +436,7 @@ get mqtt.iata
 ```
 
 **Via Serial Console (Optional - Owner Configuration):**
+
 ```
 # Set owner public key (64 hex characters, 32 bytes)
 # This is used for matching nodes with owners in MQTT messages
@@ -405,9 +451,11 @@ get mqtt.email
 ```
 
 ### Step 5: Configure Timezone
+
 Set your local timezone for accurate timestamps.
 
 **Via LoRa Repeater Console:**
+
 ```
 # Set timezone (choose one method)
 set timezone "America/Los_Angeles"    # IANA format
@@ -419,9 +467,11 @@ get timezone
 ```
 
 ### Step 6: Configure MQTT Settings
+
 Customize which messages to publish and how often.
 
 **Via LoRa Repeater Console:**
+
 ```
 # Configure MQTT server (optional - uses defaults if not set)
 set mqtt.server "your-mqtt-broker.com"
@@ -448,9 +498,11 @@ get mqtt.interval
 ```
 
 ### Step 7: Verify MQTT Broker Connection
+
 Check that the device can connect to MQTT brokers.
 
 **Via LoRa Repeater Console:**
+
 ```
 # Check bridge status
 get bridge.enabled
@@ -464,25 +516,31 @@ get mqtt.analyzer.eu
 ```
 
 ### Step 8: Monitor MQTT Messages
+
 Once configured, the device will automatically publish messages to MQTT brokers.
 
 **Default MQTT Broker**: `meshtastic.pugetmesh.org:1883`
+
 - Username: `meshdev`
 - Password: `large4cats`
 
 **Topic Structure**:
+
 - Status: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/status`
 - Packets: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/packets`
 - Raw: `meshcore/{IATA}/{DEVICE_PUBLIC_KEY}/raw`
 
 **Example Topics**:
+
 - `meshcore/SEA/7E7662676F7F0850A8A355BAAFBFC1EB7B4174C340442D7D7161C9474A2C9400/status`
 - `meshcore/SEA/7E7662676F7F0850A8A355BAAFBFC1EB7B4174C340442D7D7161C9474A2C9400/packets`
 
 ### Step 9: Troubleshooting
 
 #### Device Won't Connect to WiFi
+
 **Via LoRa Repeater Console:**
+
 ```
 # Check WiFi settings
 get wifi.ssid
@@ -502,7 +560,9 @@ set wifi.powersave none
 ```
 
 #### No MQTT Messages Appearing
+
 **Via LoRa Repeater Console:**
+
 ```
 # Check bridge status
 get bridge.enabled
@@ -520,7 +580,9 @@ set bridge.enabled on
 ```
 
 #### Timezone Issues
+
 **Via LoRa Repeater Console:**
+
 ```
 # Check current timezone
 get timezone
@@ -532,6 +594,7 @@ set timezone "UTC-5"                  # UTC offset
 ```
 
 #### LoRa Configuration Issues
+
 - **Device not responding**: Ensure both devices are on the same mesh network
 - **Commands not working**: Check that the target device is reachable via LoRa
 - **No response to get commands**: Verify the device is powered and in range
@@ -539,6 +602,7 @@ set timezone "UTC-5"                  # UTC offset
 ### Step 10: Advanced Configuration (Optional)
 
 #### Custom MQTT Broker
+
 If you want to use your own MQTT broker instead of the default:
 
 ```
@@ -548,6 +612,7 @@ If you want to use your own MQTT broker instead of the default:
 ```
 
 #### Let's Mesh Analyzer Servers
+
 The device automatically connects to Let's Mesh Analyzer servers for additional monitoring:
 
 - **US Server**: `mqtt-us-v1.letsmesh.net:443` (WebSocket with TLS)

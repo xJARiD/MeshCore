@@ -7,22 +7,26 @@ The nRF52 Power Management module provides battery protection features to preven
 ## Features
 
 ### Boot Voltage Protection
+
 - Checks battery voltage immediately after boot and before mesh operations commence
 - If voltage is below a configurable threshold (e.g., 3300mV), the device configures voltage wake (LPCOMP + VBUS) and enters protective shutdown (SYSTEMOFF)
 - Prevents boot loops when battery is critically low
 - Skipped when external power (USB VBUS) is detected
 
 ### Voltage Wake (LPCOMP + VBUS)
+
 - Configures the nRF52's Low Power Comparator (LPCOMP) before entering SYSTEMOFF
 - Enables USB VBUS detection so external power can wake the device
 - Device automatically wakes when battery voltage rises above recovery threshold or when VBUS is detected
 
 ### Early Boot Register Capture
+
 - Captures RESETREAS (reset reason) and GPREGRET2 (shutdown reason) before SystemInit() clears them
 - Allows firmware to determine why it booted (cold boot, watchdog, LPCOMP wake, etc.)
 - Allows firmware to determine why it last shut down (user request, low voltage, boot protection)
 
 ### Shutdown Reason Tracking
+
 Shutdown reason codes (stored in GPREGRET2):
 | Code | Name | Description |
 |------|------|-------------|
@@ -33,27 +37,28 @@ Shutdown reason codes (stored in GPREGRET2):
 
 ## Supported Boards
 
-| Board | Implemented | LPCOMP wake | VBUS wake |
-|-------|-------------|-------------|-----------|
-| Seeed Studio XIAO nRF52840 (`xiao_nrf52`) | Yes | Yes | Yes |
-| RAK4631 (`rak4631`) | Yes | Yes | Yes |
-| Heltec T114 (`heltec_t114`) | Yes | Yes | Yes |
-| Promicro nRF52840 | No | No | No |
-| RAK WisMesh Tag | No | No | No |
-| Heltec Mesh Solar | No | No | No |
-| LilyGo T-Echo / T-Echo Lite | No | No | No |
-| SenseCAP Solar | Yes | Yes | Yes |
-| WIO Tracker L1 / L1 E-Ink | No | No | No |
-| WIO WM1110 | No | No | No |
-| Mesh Pocket | No | No | No |
-| Nano G2 Ultra | No | No | No |
-| ThinkNode M1/M3/M6 | No | No | No |
-| T1000-E | No | No | No |
-| Ikoka Nano/Stick/Handheld (nRF) | No | No | No |
-| Keepteen LT1 | No | No | No |
-| Minewsemi ME25LS01 | No | No | No |
+| Board                                     | Implemented | LPCOMP wake | VBUS wake |
+| ----------------------------------------- | ----------- | ----------- | --------- |
+| Seeed Studio XIAO nRF52840 (`xiao_nrf52`) | Yes         | Yes         | Yes       |
+| RAK4631 (`rak4631`)                       | Yes         | Yes         | Yes       |
+| Heltec T114 (`heltec_t114`)               | Yes         | Yes         | Yes       |
+| Promicro nRF52840                         | No          | No          | No        |
+| RAK WisMesh Tag                           | No          | No          | No        |
+| Heltec Mesh Solar                         | No          | No          | No        |
+| LilyGo T-Echo / T-Echo Lite               | No          | No          | No        |
+| SenseCAP Solar                            | Yes         | Yes         | Yes       |
+| WIO Tracker L1 / L1 E-Ink                 | No          | No          | No        |
+| WIO WM1110                                | No          | No          | No        |
+| Mesh Pocket                               | No          | No          | No        |
+| Nano G2 Ultra                             | No          | No          | No        |
+| ThinkNode M1/M3/M6                        | No          | No          | No        |
+| T1000-E                                   | No          | No          | No        |
+| Ikoka Nano/Stick/Handheld (nRF)           | No          | No          | No        |
+| Keepteen LT1                              | No          | No          | No        |
+| Minewsemi ME25LS01                        | No          | No          | No        |
 
 Notes:
+
 - "Implemented" reflects Phase 1 (boot lockout + shutdown reason capture).
 - User power-off on Heltec T114 does not enable LPCOMP wake.
 - VBUS detection is used to skip boot lockout on external power, and VBUS wake is configured alongside LPCOMP when supported hardware exposes VBUS to the nRF52.
@@ -67,6 +72,7 @@ The power management functionality is integrated into the `NRF52Board` base clas
 ### Early Boot Capture
 
 A static constructor with priority 101 in `NRF52Board.cpp` captures the RESETREAS and GPREGRET2 registers before:
+
 - SystemInit() (priority 102) - which clears RESETREAS
 - Static C++ constructors (default priority 65535)
 
@@ -77,11 +83,13 @@ This ensures we capture the true reset reason before any initialisation code run
 To enable power management on a board variant:
 
 1. **Enable in platformio.ini**:
+
    ```ini
    -D NRF52_POWER_MANAGEMENT
    ```
 
 2. **Define configuration in variant.h**:
+
    ```c
    #define PWRMGT_VOLTAGE_BOOTLOCK    3300   // Won't boot below this voltage (mV)
    #define PWRMGT_LPCOMP_AIN          7      // AIN channel for voltage sensing
@@ -89,6 +97,7 @@ To enable power management on a board variant:
    ```
 
 3. **Implement in board .cpp file**:
+
    ```cpp
    #ifdef NRF52_POWER_MANAGEMENT
    const PowerMgtConfig power_config = {
@@ -132,6 +141,7 @@ To enable power management on a board variant:
 ### Voltage Wake Configuration
 
 The LPCOMP (Low Power Comparator) is configured to:
+
 - Monitor the specified AIN channel (0-7 corresponding to P0.02-P0.05, P0.28-P0.31)
 - Compare against VDD fraction reference (REFSEL: 0-6=1/8..7/8, 7=ARef, 8-15=1/16..15/16)
 - Detect UP events (voltage rising above threshold)
@@ -166,8 +176,9 @@ VBUS wake is enabled via the POWER peripheral USBDETECTED event whenever `config
 ### SoftDevice Compatibility
 
 The power management code checks whether SoftDevice is enabled and uses the appropriate API:
+
 - When SD enabled: `sd_power_*` functions
-- When SD disabled: Direct register access (NRF_POWER->*)
+- When SD disabled: Direct register access (NRF_POWER->\*)
 
 This ensures compatibility regardless of BLE stack state.
 
@@ -175,14 +186,15 @@ This ensures compatibility regardless of BLE stack state.
 
 Power management status can be queried via the CLI:
 
-| Command | Description |
-|---------|-------------|
-| `get pwrmgt.support` | Returns "supported" or "unsupported" |
-| `get pwrmgt.source` | Returns current power source - "battery" or "external" (5V/USB power) |
-| `get pwrmgt.bootreason` | Returns reset and shutdown reason strings |
-| `get pwrmgt.bootmv` | Returns boot voltage in millivolts |
+| Command                 | Description                                                           |
+| ----------------------- | --------------------------------------------------------------------- |
+| `get pwrmgt.support`    | Returns "supported" or "unsupported"                                  |
+| `get pwrmgt.source`     | Returns current power source - "battery" or "external" (5V/USB power) |
+| `get pwrmgt.bootreason` | Returns reset and shutdown reason strings                             |
+| `get pwrmgt.bootmv`     | Returns boot voltage in millivolts                                    |
 
 On boards without power management enabled, all commands except `get pwrmgt.support` return:
+
 ```
 ERROR: Power management not supported
 ```
@@ -190,6 +202,7 @@ ERROR: Power management not supported
 ## Debug Output
 
 When `MESH_DEBUG=1` is enabled, the power management module outputs:
+
 ```
 DEBUG: PWRMGT: Reset = Wake from LPCOMP (0x20000); Shutdown = Low Voltage (0x4C)
 DEBUG: PWRMGT: Boot voltage = 3450 mV (threshold = 3300 mV)

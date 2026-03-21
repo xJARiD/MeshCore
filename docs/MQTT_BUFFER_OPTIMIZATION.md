@@ -16,30 +16,33 @@ void MQTTBridge::optimizeMqttClientConfig(PsychicMqttClient* client);
 
 ### Optimizations Applied
 
-1. **Reduced Buffer Size**: Changed from default 1024 bytes to 512 bytes
-   - Applied via `client->setBufferSize(512)`
-   - Saves ~512 bytes per MQTT client
-   - Our JSON messages are typically <500 bytes, so 512 is sufficient
+1. **Reduced Buffer Size**: Changed from default 1024 bytes to 896 bytes (uniform across all clients)
+   - Applied via `client->setBufferSize(896)`
+   - Saves ~128 bytes per MQTT client while keeping analyzer JWT connects reliable
+   - 896 is used to safely fit analyzer CONNECT packets with JWT auth and reduce mixed-size allocation fragmentation
 
-2. **ESP-IDF v5 Output Buffer**: Reduced `buffer.out_size` to 512 bytes
-   - Applied via direct config access: `config->buffer.out_size = 512`
-   - Saves an additional ~512 bytes per client on ESP-IDF v5
+2. **ESP-IDF v5 Output Buffer**: Reduced `buffer.out_size` cap to 896 bytes
+   - Applied via direct config access: `config->buffer.out_size = 896`
+   - Saves up to ~128 additional bytes per client on ESP-IDF v5 (when default was 1024)
 
 ### Memory Savings
 
 **Per Client Savings:**
-- Input buffer: 1024 → 512 bytes = **512 bytes saved**
-- Output buffer (ESP-IDF v5): 1024 → 512 bytes = **512 bytes saved**
-- **Total per client: ~1KB saved** (ESP-IDF v5) or **512 bytes** (ESP-IDF v4)
+
+- Input buffer: 1024 -> 896 bytes = **128 bytes saved**
+- Output buffer (ESP-IDF v5): 1024 -> 896 bytes = **128 bytes saved**
+- **Total per client: up to ~256 bytes saved** (ESP-IDF v5) or **~128 bytes** (ESP-IDF v4)
 
 **Total System Savings:**
+
 - 3 MQTT clients (main + US analyzer + EU analyzer)
-- ESP-IDF v5: **~3KB total savings**
-- ESP-IDF v4: **~1.5KB total savings**
+- ESP-IDF v5: **up to ~768 bytes total savings**
+- ESP-IDF v4: **~384 bytes total savings**
 
 ### Applied To
 
 The optimization is automatically applied to all three MQTT clients:
+
 1. `_mqtt_client` - Main MQTT client (in `begin()`)
 2. `_analyzer_us_client` - US analyzer server client (in `setupAnalyzerClients()`)
 3. `_analyzer_eu_client` - EU analyzer server client (in `setupAnalyzerClients()`)
@@ -60,29 +63,32 @@ The optimization is automatically applied to all three MQTT clients:
 ### ESP-IDF Version Detection
 
 The code handles both ESP-IDF v4 and v5:
+
 - **ESP-IDF v5**: Uses `config->buffer.size` and `config->buffer.out_size`
 - **ESP-IDF v4**: Uses `config->buffer_size` (set via `setBufferSize()`)
 
 ### Buffer Size Rationale
 
 - **Default**: 1024 bytes (ESP-IDF default)
-- **Optimized**: 512 bytes
-- **Justification**: 
+- **Optimized**: 896 bytes (uniform for main + analyzer clients)
+- **Justification**:
   - Status messages: ~400-500 bytes
   - Packet messages: ~400-1500 bytes (most <500)
   - Raw messages: ~200-400 bytes
-  - 512 bytes is sufficient for 95%+ of messages
+  - 896 bytes is currently used as the stable floor for JWT/WSS analyzer connections
   - Larger messages will be fragmented (handled automatically by ESP-IDF)
 
 ## Impact
 
 ### Memory Benefits
+
 - **Reduced per-client memory footprint**
 - **Lower heap fragmentation** (smaller allocations)
 - **More headroom for other operations**
 
 ### Potential Trade-offs
-- **Message fragmentation**: Messages >512 bytes will be split into multiple chunks
+
+- **Message fragmentation**: Messages >896 bytes will be split into multiple chunks
   - ESP-IDF handles this automatically
   - No functional impact, just slightly more overhead for large messages
 - **Large packet responses**: Neighbors list responses (~1500 bytes) will be fragmented
@@ -98,16 +104,17 @@ The code handles both ESP-IDF v4 and v5:
 ## Related Optimizations
 
 This complements existing memory optimizations:
-- ✅ Memory pressure monitoring (skip publishes when Max alloc < 60KB)
-- ✅ Reduced raw data storage for TX packets
+
+- ✅ Memory pressure monitoring (skip publishes using adaptive max-alloc thresholds based on internal heap size)
+- ✅ Packet JSON buffers prefer PSRAM with stack fallback
 - ✅ Consolidated analyzer server publishing
 - ✅ Buffer size optimization (this change)
 
 ## Future Considerations
 
 If memory pressure persists, consider:
-1. Further reducing buffer size to 256 bytes (may cause more fragmentation)
+
+1. Reducing buffer size below 896 is not recommended for analyzer JWT mode without validation
 2. Using synchronous publishes (`async=false`) to reduce queue overhead
 3. Reducing to single analyzer server (eliminates one client entirely)
 4. Custom MQTT implementation with zero-copy design (significant effort)
-

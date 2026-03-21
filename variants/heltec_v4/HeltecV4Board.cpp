@@ -41,7 +41,8 @@ void HeltecV4Board::begin() {
 
     rtc_gpio_hold_en((gpio_num_t)P_LORA_NSS);
 
-    loRaFEMControl.setRxModeEnableWhenMCUSleep();//It also needs to be enabled in receive mode
+    // Keep the FEM in RX mode so DIO1 can still wake the MCU on incoming packets.
+    loRaFEMControl.setRxModeEnableWhenMCUSleep();
 
     if (pin_wake_btn < 0) {
       esp_sleep_enable_ext1_wakeup( (1L << P_LORA_DIO_1), ESP_EXT1_WAKEUP_ANY_HIGH);  // wake up on: recv LoRa packet

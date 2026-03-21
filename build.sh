@@ -47,9 +47,17 @@ $ sh build.sh build-firmware RAK_4631_repeater
 EOF
 }
 
+pio_cmd() {
+  if command -v poetry >/dev/null 2>&1; then
+    poetry run pio "$@"
+  else
+    pio "$@"
+  fi
+}
+
 # get a list of pio env names that start with "env:"
 get_pio_envs() {
-  pio project config | grep 'env:' | sed 's/env://'
+  pio_cmd project config | grep 'env:' | sed 's/env://'
 }
 
 # Catch cries for help before doing anything else.
@@ -63,9 +71,6 @@ case $1 in
     exit 0
     ;;
 esac
-
-# cache project config json for use in get_platform_for_env()
-PIO_CONFIG_JSON=$(pio project config --json-output)
 
 # $1 should be the string to find (case insensitive)
 get_pio_envs_containing_string() {
@@ -93,19 +98,7 @@ get_pio_envs_ending_with_string() {
 # $1 should be the environment name
 get_platform_for_env() {
   local env_name=$1
-  echo "$PIO_CONFIG_JSON" | python3 -c "
-import sys, json, re
-data = json.load(sys.stdin)
-for section, options in data:
-    if section == 'env:$env_name':
-        for key, value in options:
-            if key == 'build_flags':
-                for flag in value:
-                    match = re.search(r'(ESP32_PLATFORM|NRF52_PLATFORM|STM32_PLATFORM|RP2040_PLATFORM)', flag)
-                    if match:
-                        print(match.group(1))
-                        sys.exit(0)
-"
+  pio_cmd run -e "$env_name" -t envdump | grep -oE 'ESP32_PLATFORM|NRF52_PLATFORM|STM32_PLATFORM|RP2040_PLATFORM' | head -n 1
 }
 
 # disable all debug logging flags if DISABLE_DEBUG=1 is set
@@ -147,11 +140,11 @@ build_firmware() {
   disable_debug_flags
 
   # build firmware target
-  pio run -e $1
+  pio_cmd run -e $1
 
   # build merge-bin for esp32 fresh install, copy .bins to out folder (e.g: Heltec_v3_room_server-v1.0.0-SHA.bin)
   if [ "$ENV_PLATFORM" == "ESP32_PLATFORM" ]; then
-    pio run -t mergebin -e $1
+    pio_cmd run -t mergebin -e $1
     cp .pio/build/$1/firmware.bin out/${FIRMWARE_FILENAME}.bin 2>/dev/null || true
     cp .pio/build/$1/firmware-merged.bin out/${FIRMWARE_FILENAME}-merged.bin 2>/dev/null || true
   fi

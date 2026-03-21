@@ -81,11 +81,9 @@ void HeltecTrackerV2Board::begin() {
 
     rtc_gpio_hold_en((gpio_num_t)P_LORA_NSS);
 
-    // Hold GC1109 FEM pins during sleep for RX wake capability
-    // State: CSD=1, CTX=0 (DIO2), CPS=X -> Receive LNA mode
-    rtc_gpio_hold_en((gpio_num_t)P_LORA_PA_POWER);   // VFEM_Ctrl - keep LDO powered
-    rtc_gpio_hold_en((gpio_num_t)P_LORA_PA_EN);      // CSD=1 - chip enabled
-    // Note: GPIO46 (CPS) is NOT an RTC GPIO, cannot hold - but CPS is don't care for RX
+    // Hold GC1109 FEM pins during sleep to keep LNA active for RX wake
+    rtc_gpio_hold_en((gpio_num_t)P_LORA_PA_POWER);
+    rtc_gpio_hold_en((gpio_num_t)P_LORA_PA_EN);
 
     if (pin_wake_btn < 0) {
       esp_sleep_enable_ext1_wakeup( (1L << P_LORA_DIO_1), ESP_EXT1_WAKEUP_ANY_HIGH);  // wake up on: recv LoRa packet

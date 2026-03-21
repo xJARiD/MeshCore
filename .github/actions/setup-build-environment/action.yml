@@ -1,8 +1,8 @@
 name: Setup Build Environment
+description: Setup Build Environment
 runs:
   using: "composite"
   steps:
-
     - name: Init Cache
       uses: actions/cache@v4
       with:
@@ -14,7 +14,7 @@ runs:
     - name: Install Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: "3.11"
 
     - name: Install PlatformIO
       shell: bash

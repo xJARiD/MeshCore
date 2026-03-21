@@ -9,22 +9,22 @@ MeshCore provides the ability to create wireless mesh networks, similar to Mesht
 
 ## ⚡ Key Features
 
-* Multi-Hop Packet Routing
-  * Devices can forward messages across multiple nodes, extending range beyond a single radio's reach.
-  * Supports up to a configurable number of hops to balance network efficiency and prevent excessive traffic.
-  * Nodes use fixed roles where "Companion" nodes are not repeating messages at all to prevent adverse routing paths from being used.
-* Supports LoRa Radios – Works with Heltec, RAK Wireless, and other LoRa-based hardware.
-* Decentralized & Resilient – No central server or internet required; the network is self-healing.
-* Low Power Consumption – Ideal for battery-powered or solar-powered devices.
-* Simple to Deploy – Pre-built example applications make it easy to get started.
+- Multi-Hop Packet Routing
+  - Devices can forward messages across multiple nodes, extending range beyond a single radio's reach.
+  - Supports up to a configurable number of hops to balance network efficiency and prevent excessive traffic.
+  - Nodes use fixed roles where "Companion" nodes are not repeating messages at all to prevent adverse routing paths from being used.
+- Supports LoRa Radios – Works with Heltec, RAK Wireless, and other LoRa-based hardware.
+- Decentralized & Resilient – No central server or internet required; the network is self-healing.
+- Low Power Consumption – Ideal for battery-powered or solar-powered devices.
+- Simple to Deploy – Pre-built example applications make it easy to get started.
 
 ## 🎯 What Can You Use MeshCore For?
 
-* Off-Grid Communication: Stay connected even in remote areas.
-* Emergency Response & Disaster Recovery: Set up instant networks where infrastructure is down.
-* Outdoor Activities: Hiking, camping, and adventure racing communication.
-* Tactical & Security Applications: Military, law enforcement, and private security use cases.
-* IoT & Sensor Networks: Collect data from remote sensors and relay it back to a central location.
+- Off-Grid Communication: Stay connected even in remote areas.
+- Emergency Response & Disaster Recovery: Set up instant networks where infrastructure is down.
+- Outdoor Activities: Hiking, camping, and adventure racing communication.
+- Tactical & Security Applications: Military, law enforcement, and private security use cases.
+- IoT & Sensor Networks: Collect data from remote sensors and relay it back to a central location.
 
 ## 🚀 How to Get Started
 
@@ -46,6 +46,23 @@ For developers;
   - [Simple Sensor](./examples/simple_sensor) - Remote sensor node with telemetry and alerting.
 
 The Simple Secure Chat example can be interacted with through the Serial Monitor in Visual Studio Code, or with a Serial USB Terminal on Android.
+
+### Python / Poetry Workflow
+
+MeshCore includes a Poetry-managed Python environment for build tooling (including PlatformIO).
+
+```bash
+# install dependencies from poetry.lock
+poetry install
+
+# run PlatformIO through Poetry
+poetry run pio run
+```
+
+For board-specific MQTT observer setup (Heltec V4), see:
+
+- [EastMesh MQTT Setup](./docs/eastmesh.md)
+- Credits: [`mqtt-bridge-implementation` branch](https://github.com/agessaman/MeshCore/tree/mqtt-bridge-implementation) by [@agessaman](https://github.com/agessaman).
 
 ## ⚡️ MeshCore Flasher
 
@@ -91,20 +108,22 @@ Please submit PR's using 'dev' as the base branch!
 For minor changes just submit your PR and we'll try to review it, but for anything more 'impactful' please open an Issue first and start a discussion. Is better to sound out what it is you want to achieve first, and try to come to a consensus on what the best approach is, especially when it impacts the structure or architecture of this codebase.
 
 Here are some general principals you should try to adhere to:
-* Keep it simple. Please, don't think like a high-level lang programmer. Think embedded, and keep code concise, without any unnecessary layers.
-* No dynamic memory allocation, except during setup/begin functions.
-* Use the same brace and indenting style that's in the core source modules. (A .clang-format is prob going to be added soon, but please do NOT retroactively re-format existing code. This just creates unnecessary diffs that make finding problems harder)
+
+- Keep it simple. Please, don't think like a high-level lang programmer. Think embedded, and keep code concise, without any unnecessary layers.
+- No dynamic memory allocation, except during setup/begin functions.
+- Use the same brace and indenting style that's in the core source modules. (A .clang-format is prob going to be added soon, but please do NOT retroactively re-format existing code. This just creates unnecessary diffs that make finding problems harder)
 
 Help us prioritize! Please react with thumbs-up to issues/PRs you care about most. We look at reaction counts when planning work.
 
 ## Road-Map / To-Do
 
 There are a number of fairly major features in the pipeline, with no particular time-frames attached yet. In very rough chronological order:
-- [X] Companion radio: UI redesign
-- [X] Repeater + Room Server: add ACL's (like Sensor Node has)
-- [X] Standardise Bridge mode for repeaters
+
+- [x] Companion radio: UI redesign
+- [x] Repeater + Room Server: add ACL's (like Sensor Node has)
+- [x] Standardise Bridge mode for repeaters
 - [ ] Repeater/Bridge: Standardise the Transport Codes for zoning/filtering
-- [X] Core + Repeater: enhanced zero-hop neighbour discovery
+- [x] Core + Repeater: enhanced zero-hop neighbour discovery
 - [ ] Core: round-trip manual path support
 - [ ] Companion + Apps: support for multiple sub-meshes (and 'off-grid' client repeat mode)
 - [ ] Core + Apps: support for LZW message compression

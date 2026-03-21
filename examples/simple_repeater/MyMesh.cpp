@@ -934,7 +934,7 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
 
   // MQTT defaults
   StrHelper::strncpy(_prefs.mqtt_origin, "MeshCore-Repeater", sizeof(_prefs.mqtt_origin));
-  StrHelper::strncpy(_prefs.mqtt_iata, "SEA", sizeof(_prefs.mqtt_iata));
+  StrHelper::strncpy(_prefs.mqtt_iata, "MEL", sizeof(_prefs.mqtt_iata));
   _prefs.mqtt_status_enabled = 1;    // enabled
   _prefs.mqtt_packets_enabled = 1;   // enabled
   _prefs.mqtt_raw_enabled = 0;       // disabled
@@ -945,13 +945,26 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   StrHelper::strncpy(_prefs.wifi_ssid, "ssid_here", sizeof(_prefs.wifi_ssid));
   StrHelper::strncpy(_prefs.wifi_password, "password_here", sizeof(_prefs.wifi_password));
 
-  // Timezone defaults (Pacific Time with DST support)
-  StrHelper::strncpy(_prefs.timezone_string, "America/Los_Angeles", sizeof(_prefs.timezone_string));
-  _prefs.timezone_offset = -8; // fallback
+  // Timezone defaults (Melbourne Time with DST support)
+  StrHelper::strncpy(_prefs.timezone_string, "Australia/Melbourne", sizeof(_prefs.timezone_string));
+  _prefs.timezone_offset = 10;
 
   // Let's Mesh Analyzer defaults (both enabled by default)
   _prefs.mqtt_analyzer_us_enabled = 1; // enabled
   _prefs.mqtt_analyzer_eu_enabled = 1; // enabled
+
+#ifdef MQTT_SERVER
+  StrHelper::strncpy(_prefs.mqtt_server, MQTT_SERVER, sizeof(_prefs.mqtt_server));
+#endif
+#ifdef MQTT_PORT
+  _prefs.mqtt_port = MQTT_PORT;
+#endif
+#ifdef MQTT_USERNAME
+  StrHelper::strncpy(_prefs.mqtt_username, MQTT_USERNAME, sizeof(_prefs.mqtt_username));
+#endif
+#ifdef MQTT_PASSWORD
+  StrHelper::strncpy(_prefs.mqtt_password, MQTT_PASSWORD, sizeof(_prefs.mqtt_password));
+#endif
 
   _prefs.adc_multiplier = 0.0f; // 0.0f means use default board multiplier
 
