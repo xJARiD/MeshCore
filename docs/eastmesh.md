@@ -6,7 +6,7 @@ Beginner-friendly setup guide for the EastMesh MQTT observer firmware.
 
 If you just want to get going with a prebuilt firmware image, start here:
 
-- `https://github.com/xJARiD/MeshCore/releases`
+- [github.com/xJARiD/MeshCore/releases](https://github.com/xJARiD/MeshCore/releases)
 
 This guide covers:
 
@@ -205,7 +205,7 @@ Replace `<PORT>` with the value from `poetry run pio device list`.
 
 Prebuilt `.bin` files for the preconfigured observer-MQTT environments are published here:
 
-- `https://github.com/xJARiD/MeshCore/releases`
+- [github.com/xJARiD/MeshCore/releases](https://github.com/xJARiD/MeshCore/releases)
 
 If you want to build your own instead, this is mainly for macOS/Linux users using `build.sh`.
 
@@ -468,14 +468,14 @@ Additional community-maintained documentation is also available at these unoffic
 
 ### ACT/NSW/QLD/SA/TAS/VIC
 
-- `https://wiki.eastmesh.au/`
-- `https://wiki.meshcoreaus.org/`
+- [wiki.eastmesh.au](https://wiki.eastmesh.au/)
+- [wiki.meshcoreaus.org](https://wiki.meshcoreaus.org/)
 
 ### Sydney
 
-- `https://nswmesh.au/`
-- `https://github.com/nswmesh/`
+- [nswmesh.au](https://nswmesh.au/)
+- [github.com/nswmesh](https://github.com/nswmesh/)
 
 ### Brisbane
 
-- `https://wiki.mbug.com.au/en/Meshcore/Settings`
+- [wiki.mbug.com.au/en/Meshcore/Settings](https://wiki.mbug.com.au/en/Meshcore/Settings)
