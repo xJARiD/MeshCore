@@ -329,6 +329,36 @@ set wifi.powersave none
 
 Additional WiFi command reference is documented in [MQTT Bridge Implementation](./MQTT_IMPLEMENTATION.md#step-3-configure-wifi-connection).
 
+## Step 9: Set MQTT Identity
+
+EastMesh uses the node name as `mqtt.origin`, so in most cases you do not need to set `mqtt.origin` manually if you already named the repeater in the earlier setup step.
+
+It is still worth checking both identity fields:
+
+```text
+get mqtt.origin
+get mqtt.iata
+```
+
+If `mqtt.origin` is blank or not what you expect, set it manually:
+
+```text
+set mqtt.origin YourNodeName
+```
+
+If you also want the repeater to publish using an airport-style region code for analyzer topics, set `mqtt.iata`:
+
+```text
+set mqtt.iata MEL
+```
+
+Then verify again:
+
+```text
+get mqtt.origin
+get mqtt.iata
+```
+
 ## Known Issue: First Flash Does Not Always Apply MQTT Defaults
 
 There is a current bug where the `platformio.ini` MQTT values for Heltec V3 and V4 do not always apply correctly on the first flash.
@@ -337,11 +367,19 @@ Because of that, after WiFi is configured you should always verify the live MQTT
 
 If the values are missing or wrong, set them manually and reboot.
 
-## Step 9: Verify or Repair MQTT Settings
+## Step 10: Verify or Repair MQTT Settings
 
 Check the live MQTT settings:
 
 ```text
+get bridge.enabled
+get bridge.source
+get mqtt.origin
+get mqtt.iata
+get mqtt.status
+get mqtt.packets
+get mqtt.tx
+get mqtt.interval
 get mqtt.server
 get mqtt.port
 get mqtt.password
@@ -352,23 +390,45 @@ get mqtt.config.valid
 
 For EastMesh, the expected values are:
 
+- `bridge.enabled` -> `on`
+- `bridge.source` -> usually `rx`
 - `mqtt.server` -> `wss://mqtt2.eastmesh.au`
 - `mqtt.port` -> `443`
 - `mqtt.password` -> `jwt`
+- `mqtt.interval` -> `5` minutes
+- `mqtt.status` -> normally `on`
+- `mqtt.packets` -> normally `on`
 
 If any of those are wrong or blank, set them manually:
 
 ```text
+set bridge.enabled on
+set bridge.source rx
 set mqtt.server wss://mqtt2.eastmesh.au
 set mqtt.port 443
 set mqtt.password jwt
+set mqtt.interval 5
+set mqtt.status on
+set mqtt.packets on
 ```
 
 Do **not** set `mqtt.username`.
 
+For EastMesh, best practice is `set mqtt.interval 5`.
+
+Note: although [MQTT Bridge Implementation](./MQTT_IMPLEMENTATION.md) currently documents `mqtt.interval` as milliseconds, current behavior has been confirmed as minutes, so `5` means 5 minutes.
+
 Then verify again:
 
 ```text
+get bridge.enabled
+get bridge.source
+get mqtt.origin
+get mqtt.iata
+get mqtt.status
+get mqtt.packets
+get mqtt.tx
+get mqtt.interval
 get mqtt.server
 get mqtt.port
 get mqtt.password
@@ -377,7 +437,7 @@ get mqtt.config.valid
 
 For the broader MQTT command set, see [MQTT Bridge Implementation](./MQTT_IMPLEMENTATION.md#step-6-configure-mqtt-settings).
 
-## Step 10: Optional Analyzer Settings
+## Step 11: Optional Analyzer Settings
 
 You can also publish to the Let's Mesh analyzers:
 
@@ -418,7 +478,81 @@ If you do have nearby mesh neighbours or another MQTT-connected repeater hearing
 
 Background on the Let's Mesh analyzer integration is in [MQTT Bridge Implementation](./MQTT_IMPLEMENTATION.md#lets-mesh-analyzer-integration).
 
-## Step 11: Reboot
+## Step 12: Common Extra Commands
+
+These are also common MQTT bridge commands that can be useful on EastMesh, even though they are not required for a basic observer setup.
+
+### Restart the Bridge Without a Full Reboot
+
+If you changed MQTT settings and want to restart just the bridge logic first, use:
+
+```text
+set bridge.enabled off
+set bridge.enabled on
+```
+
+### Raw Packet Publishing
+
+Raw publishing is usually left off, but it can be useful for debugging:
+
+```text
+get mqtt.raw
+set mqtt.raw on
+set mqtt.raw off
+```
+
+### Status Publish Interval
+
+Recommended EastMesh setting:
+
+```text
+get mqtt.interval
+set mqtt.interval 5
+```
+
+`5` means 5 minutes.
+
+### Timezone for Timestamps
+
+If you want local timestamps to match your region, you can set a timezone:
+
+```text
+get timezone
+get timezone.offset
+set timezone Australia/Melbourne
+set timezone.offset 10
+```
+
+You normally only need one timezone method. Prefer `set timezone <IANA name>` where possible.
+
+### Optional Owner Association Fields
+
+These commands are not required for basic EastMesh observer bring-up, but they can be useful if you want to associate the repeater with the owner:
+
+- `mqtt.owner`
+- `mqtt.email`
+
+Recommended usage:
+
+- set `mqtt.owner` to the owner's companion node public key
+- set `mqtt.email` to the owner's Let's Mesh forum-registered email address
+
+These fields are serial-console-oriented commands, so set and verify them from the serial console:
+
+```text
+set mqtt.owner A1B2C3D4E5F6789012345678901234567890123456789012345678901234567890
+set mqtt.email owner@example.com
+get mqtt.owner
+get mqtt.email
+```
+
+### Commands Not Used for EastMesh
+
+For EastMesh specifically:
+
+- do **not** set `mqtt.username`
+
+## Step 13: Reboot
 
 After changing WiFi or MQTT settings, reboot the device:
 
@@ -430,7 +564,7 @@ Once rebooted, it can be worth re-running the `get` checks from the WiFi and MQT
 
 This is not strictly required, but it is useful as a sanity check.
 
-## Step 12: Confirm It Connected
+## Step 14: Confirm It Connected
 
 Expected connection logs include:
 
