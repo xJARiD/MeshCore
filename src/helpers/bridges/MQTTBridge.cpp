@@ -347,14 +347,10 @@ MQTTBridge::MQTTBridge(NodePrefs *prefs, mesh::PacketManager *mgr, mesh::RTCCloc
   _last_analyzer_us_log = 0;
   _last_analyzer_eu_log = 0;
   
-  // JWT token buffers: allocate in PSRAM when available (plan §2)
-  _auth_token_us = (char*)psram_malloc(AUTH_TOKEN_SIZE);
-  _auth_token_eu = (char*)psram_malloc(AUTH_TOKEN_SIZE);
-  if (_auth_token_us) _auth_token_us[0] = '\0';
-  if (_auth_token_eu) _auth_token_eu[0] = '\0';
-  
-  // Raw radio buffer in PSRAM when available (plan §6)
-  _last_raw_data = (uint8_t*)psram_malloc(LAST_RAW_DATA_SIZE);
+  // Delay heap-backed allocations until begin(); this object is constructed at global init time.
+  _auth_token_us = nullptr;
+  _auth_token_eu = nullptr;
+  _last_raw_data = nullptr;
   
   // Set default broker configuration
   setBrokerDefaults();
@@ -399,6 +395,19 @@ void MQTTBridge::begin() {
   if (!isWiFiConfigValid(_prefs)) {
     MQTT_DEBUG_PRINTLN("MQTT Bridge initialization skipped - WiFi credentials not configured");
     return;
+  }
+
+  // Allocate buffers after the ESP runtime is fully up; global constructor allocation is unsafe on ESP32.
+  if (_auth_token_us == nullptr) {
+    _auth_token_us = (char*)psram_malloc(AUTH_TOKEN_SIZE);
+    if (_auth_token_us) _auth_token_us[0] = '\0';
+  }
+  if (_auth_token_eu == nullptr) {
+    _auth_token_eu = (char*)psram_malloc(AUTH_TOKEN_SIZE);
+    if (_auth_token_eu) _auth_token_eu[0] = '\0';
+  }
+  if (_last_raw_data == nullptr) {
+    _last_raw_data = (uint8_t*)psram_malloc(LAST_RAW_DATA_SIZE);
   }
   
   // Validate custom MQTT broker configuration (optional)
@@ -626,13 +635,10 @@ void MQTTBridge::end() {
   psram_free(_mqtt_task_stack);
   _mqtt_task_stack = nullptr;
   
-  // Clean up queued packets from FreeRTOS queue
-  // NOTE: Do NOT free queued.packet - the Dispatcher owns those packets.
-  // We just discard our references to them.
+  // Clean up queued packet snapshots from FreeRTOS queue
   if (_packet_queue_handle != nullptr) {
     QueuedPacket queued;
     while (xQueueReceive(_packet_queue_handle, &queued, 0) == pdTRUE) {
-      queued.packet = nullptr;
       _queue_count--;
     }
     vQueueDelete(_packet_queue_handle);
@@ -669,12 +675,9 @@ void MQTTBridge::end() {
     _analyzer_eu_client = nullptr;
   }
   
-  // Clean up queued packet references
-  // NOTE: Do NOT free the packets - the Dispatcher owns those packets.
-  // We just discard our references to them.
+  // Clean up queued packet snapshots
   for (int i = 0; i < _queue_count; i++) {
     int index = (_queue_head + i) % MAX_QUEUE_SIZE;
-    _packet_queue[index].packet = nullptr;
     memset(&_packet_queue[index], 0, sizeof(QueuedPacket));
   }
   
@@ -1241,6 +1244,32 @@ bool MQTTBridge::isIATAValid() const {
   return true;
 }
 
+bool MQTTBridge::isSystemTimeReady() const {
+  unsigned long current_time = time(nullptr);
+  return _ntp_synced || current_time >= 1735689600UL;  // 2025-01-01 00:00:00 UTC
+}
+
+bool MQTTBridge::brokerRequiresJWT(const MQTTBroker& broker) const {
+  return strlen(broker.password) == 0 || strcmp(broker.password, "jwt") == 0;
+}
+
+bool MQTTBridge::isBrokerReadyToConnect(const MQTTBroker& broker) const {
+  if (!broker.enabled || broker.host[0] == '\0' || broker.port == 0) {
+    return false;
+  }
+  if (WiFi.status() != WL_CONNECTED) {
+    return false;
+  }
+  if (brokerRequiresJWT(broker)) {
+    return _identity != nullptr && isSystemTimeReady();
+  }
+  return true;
+}
+
+bool MQTTBridge::areAnalyzerPrerequisitesReady() const {
+  return _identity != nullptr && WiFi.status() == WL_CONNECTED && isSystemTimeReady();
+}
+
 void MQTTBridge::ensureMainMqttClient() {
   if (!_config_valid || _mqtt_client != nullptr) return;
   _mqtt_client = new PsychicMqttClient();
@@ -1401,6 +1430,21 @@ void MQTTBridge::connectToBrokers() {
   for (int i = 0; i < MAX_MQTT_BROKERS_COUNT; i++) {
     if (!_brokers[i].enabled) continue;
 
+    if (!isBrokerReadyToConnect(_brokers[i])) {
+      static unsigned long last_prereq_warning = 0;
+      unsigned long now = millis();
+      if (now - last_prereq_warning > 300000) {
+        MQTT_DEBUG_PRINTLN("Deferring broker %d connect until prerequisites are ready (wifi=%s, time=%s, jwt=%s, identity=%s)",
+                           i,
+                           WiFi.status() == WL_CONNECTED ? "ok" : "wait",
+                           isSystemTimeReady() ? "ok" : "wait",
+                           brokerRequiresJWT(_brokers[i]) ? "yes" : "no",
+                           _identity ? "ok" : "missing");
+        last_prereq_warning = now;
+      }
+      continue;
+    }
+
     if (!_brokers[i].initial_connect_done) {
       char broker_uri[192];
       buildBrokerUri(_brokers[i].host, _brokers[i].port, broker_uri, sizeof(broker_uri));
@@ -1415,7 +1459,7 @@ void MQTTBridge::connectToBrokers() {
       bool use_jwt = (strlen(_brokers[i].password) == 0 || strcmp(_brokers[i].password, "jwt") == 0);
       bool creds_set = false;
 
-      if (use_jwt && _identity) {
+      if (use_jwt) {
         MQTT_DEBUG_PRINTLN("Creating JWT token for custom broker...");
 
         #ifdef MQTT_AUDIENCE
@@ -1428,37 +1472,31 @@ void MQTTBridge::connectToBrokers() {
         static char auth_token[768];
         static char username[80];
 
-        time_t current_time = time(nullptr);
-        bool time_synced = (current_time >= 1000000000);
-
-        if (!time_synced) {
-          MQTT_DEBUG_PRINTLN("Time not synced yet, skipping JWT creation");
-        } else {
-          if (JWTHelper::createAuthToken(
-                  *_identity,
-                  aud,
-                  0,
-                  expires_in,
-                  auth_token,
-                  sizeof(auth_token),
-                  nullptr,
-                  nullptr,
-                  nullptr)) {
-            if (strlen(_brokers[i].username) > 0 && strcmp(_brokers[i].username, "your-username") != 0) {
-              strncpy(username, _brokers[i].username, sizeof(username) - 1);
-              username[sizeof(username) - 1] = '\0';
-            } else {
-              char public_key_hex[65];
-              mesh::Utils::toHex(public_key_hex, _identity->pub_key, PUB_KEY_SIZE);
-              snprintf(username, sizeof(username), "v1_%s", public_key_hex);
-            }
-
-            _mqtt_client->setCredentials(username, auth_token);
-            creds_set = true;
-            MQTT_DEBUG_PRINTLN("Custom broker JWT created successfully");
+        if (JWTHelper::createAuthToken(
+                *_identity,
+                aud,
+                0,
+                expires_in,
+                auth_token,
+                sizeof(auth_token),
+                nullptr,
+                nullptr,
+                nullptr)) {
+          if (strlen(_brokers[i].username) > 0 && strcmp(_brokers[i].username, "your-username") != 0) {
+            strncpy(username, _brokers[i].username, sizeof(username) - 1);
+            username[sizeof(username) - 1] = '\0';
           } else {
-            MQTT_DEBUG_PRINTLN("Failed to create JWT for custom broker");
+            char public_key_hex[65];
+            mesh::Utils::toHex(public_key_hex, _identity->pub_key, PUB_KEY_SIZE);
+            snprintf(username, sizeof(username), "v1_%s", public_key_hex);
           }
+
+          _mqtt_client->setCredentials(username, auth_token);
+          creds_set = true;
+          MQTT_DEBUG_PRINTLN("Custom broker JWT created successfully");
+        } else {
+          MQTT_DEBUG_PRINTLN("Failed to create JWT for custom broker");
+          continue;
         }
       }
 
@@ -1491,7 +1529,7 @@ void MQTTBridge::connectToBrokers() {
         bool use_jwt = (strlen(_brokers[i].password) == 0 || strcmp(_brokers[i].password, "jwt") == 0);
         bool creds_set = false;
 
-        if (use_jwt && _identity) {
+        if (use_jwt) {
           #ifdef MQTT_AUDIENCE
           const char* aud = MQTT_AUDIENCE;
           #else
@@ -1500,19 +1538,16 @@ void MQTTBridge::connectToBrokers() {
 
           static char auth_token[768];
           static char username[80];
-          time_t current_time = time(nullptr);
-          bool time_synced = (current_time >= 1000000000);
-
-          if (time_synced && JWTHelper::createAuthToken(
-                              *_identity,
-                              aud,
-                              0,
-                              86400,
-                              auth_token,
-                              sizeof(auth_token),
-                              nullptr,
-                              nullptr,
-                              nullptr)) {
+          if (JWTHelper::createAuthToken(
+                            *_identity,
+                            aud,
+                            0,
+                            86400,
+                            auth_token,
+                            sizeof(auth_token),
+                            nullptr,
+                            nullptr,
+                            nullptr)) {
             if (strlen(_brokers[i].username) > 0 && strcmp(_brokers[i].username, "your-username") != 0) {
               strncpy(username, _brokers[i].username, sizeof(username) - 1);
               username[sizeof(username) - 1] = '\0';
@@ -1523,6 +1558,9 @@ void MQTTBridge::connectToBrokers() {
             }
             _mqtt_client->setCredentials(username, auth_token);
             creds_set = true;
+          } else {
+            MQTT_DEBUG_PRINTLN("Failed to create JWT for custom broker reconnect");
+            continue;
           }
         }
 
@@ -1591,22 +1629,25 @@ void MQTTBridge::processPacketQueue() {
     if (xQueueReceive(_packet_queue_handle, &queued, 0) != pdTRUE) {
       break;  // No more packets
     }
-    
-    // Publish packet (use stored raw data if available)
-    publishPacket(queued.packet, queued.is_tx, 
+
+    mesh::Packet packet_copy;
+    if (!packet_copy.readFrom(queued.packet_data, queued.packet_len)) {
+      MQTT_DEBUG_PRINTLN("Dropping queued packet snapshot with invalid encoding (len=%u)", queued.packet_len);
+      _queue_count--;
+      processed++;
+      continue;
+    }
+    packet_copy._snr = queued.packet_snr;
+
+    publishPacket(&packet_copy, queued.is_tx,
                   queued.has_raw_data ? queued.raw_data : nullptr,
                   queued.has_raw_data ? queued.raw_len : 0,
                   queued.has_raw_data ? queued.snr : 0.0f,
                   queued.has_raw_data ? queued.rssi : 0.0f);
-    
-    // Publish raw if enabled
+
     if (_raw_enabled) {
-      publishRaw(queued.packet);
+      publishRaw(&packet_copy);
     }
-    
-    // NOTE: Do NOT free the packet here - the Dispatcher owns and frees it after logRx() returns.
-    // The MQTT bridge only stores a pointer to read from; it does not own the packet.
-    queued.packet = nullptr;
     
     _queue_count--;
     processed++;
@@ -1647,19 +1688,23 @@ void MQTTBridge::processPacketQueue() {
     }
     
     QueuedPacket& queued = _packet_queue[_queue_head];
-    
-    publishPacket(queued.packet, queued.is_tx, 
-                  queued.has_raw_data ? queued.raw_data : nullptr,
-                  queued.has_raw_data ? queued.raw_len : 0,
-                  queued.has_raw_data ? queued.snr : 0.0f,
-                  queued.has_raw_data ? queued.rssi : 0.0f);
-    
-    if (_raw_enabled) {
-      publishRaw(queued.packet);
+
+    mesh::Packet packet_copy;
+    if (packet_copy.readFrom(queued.packet_data, queued.packet_len)) {
+      packet_copy._snr = queued.packet_snr;
+
+      publishPacket(&packet_copy, queued.is_tx,
+                    queued.has_raw_data ? queued.raw_data : nullptr,
+                    queued.has_raw_data ? queued.raw_len : 0,
+                    queued.has_raw_data ? queued.snr : 0.0f,
+                    queued.has_raw_data ? queued.rssi : 0.0f);
+
+      if (_raw_enabled) {
+        publishRaw(&packet_copy);
+      }
+    } else {
+      MQTT_DEBUG_PRINTLN("Dropping queued packet snapshot with invalid encoding (len=%u)", queued.packet_len);
     }
-    
-    // NOTE: Do NOT free the packet here - the Dispatcher owns and frees it after logRx() returns.
-    queued.packet = nullptr;
     
     dequeuePacket();
     processed++;
@@ -2162,6 +2207,16 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
 }
 
 void MQTTBridge::queuePacket(mesh::Packet* packet, bool is_tx) {
+  if (!packet) {
+    return;
+  }
+
+  const int packet_len = packet->getRawLength();
+  if (packet_len <= 0 || packet_len > MAX_TRANS_UNIT) {
+    MQTT_DEBUG_PRINTLN("Skipping queue of invalid packet snapshot (len=%d)", packet_len);
+    return;
+  }
+
   #ifdef ESP_PLATFORM
   // Use FreeRTOS queue for thread-safe operation
   if (_packet_queue_handle == nullptr) {
@@ -2171,10 +2226,12 @@ void MQTTBridge::queuePacket(mesh::Packet* packet, bool is_tx) {
   QueuedPacket queued;
   memset(&queued, 0, sizeof(QueuedPacket));
   
-  queued.packet = packet;
   queued.timestamp = millis();
   queued.is_tx = is_tx;
+  queued.packet_len = static_cast<uint8_t>(packet_len);
+  queued.packet_snr = packet->_snr;
   queued.has_raw_data = false;
+  packet->writeTo(queued.packet_data);
   
   // Capture raw radio data with mutex protection
   // Use non-blocking mutex to prevent Core 1 from blocking - if mutex is busy, skip raw data
@@ -2200,9 +2257,7 @@ void MQTTBridge::queuePacket(mesh::Packet* packet, bool is_tx) {
     // Queue full - try to remove oldest packet
     QueuedPacket oldest;
     if (xQueueReceive(_packet_queue_handle, &oldest, 0) == pdTRUE) {
-      // NOTE: Do NOT free oldest.packet - the Dispatcher owns and frees it.
-      // We just drop our reference to it.
-      MQTT_DEBUG_PRINTLN("Queue full, dropping oldest packet reference");
+      MQTT_DEBUG_PRINTLN("Queue full, dropping oldest packet snapshot");
       // Now try to send again
       if (xQueueSend(_packet_queue_handle, &queued, 0) != pdTRUE) {
         MQTT_DEBUG_PRINTLN("Failed to queue packet after dropping oldest");
@@ -2220,21 +2275,19 @@ void MQTTBridge::queuePacket(mesh::Packet* packet, bool is_tx) {
   #else
   // Non-ESP32: Use circular buffer
   if (_queue_count >= MAX_QUEUE_SIZE) {
-    QueuedPacket& oldest = _packet_queue[_queue_head];
-    // NOTE: Do NOT free oldest.packet - the Dispatcher owns and frees it.
-    // We just drop our reference to it.
-    MQTT_DEBUG_PRINTLN("Queue full, dropping oldest packet reference (queue size: %d)", _queue_count);
-    oldest.packet = nullptr;
+    MQTT_DEBUG_PRINTLN("Queue full, dropping oldest packet snapshot (queue size: %d)", _queue_count);
     dequeuePacket();
   }
   
   QueuedPacket& queued = _packet_queue[_queue_tail];
   memset(&queued, 0, sizeof(QueuedPacket));
   
-  queued.packet = packet;
   queued.timestamp = millis();
   queued.is_tx = is_tx;
+  queued.packet_len = static_cast<uint8_t>(packet_len);
+  queued.packet_snr = packet->_snr;
   queued.has_raw_data = false;
+  packet->writeTo(queued.packet_data);
   
   if (!is_tx && _last_raw_data && _last_raw_len > 0 && (millis() - _last_raw_timestamp) < 1000) {
     if (_last_raw_len <= sizeof(queued.raw_data)) {
@@ -2554,6 +2607,12 @@ void MQTTBridge::setupAnalyzerClients() {
     return;
   }
 
+  if (!areAnalyzerPrerequisitesReady()) {
+    MQTT_DEBUG_PRINTLN("Deferring analyzer MQTT client setup until prerequisites are ready");
+    _cached_has_analyzer_servers = false;
+    return;
+  }
+
   // Setup US server client (only if enabled and doesn't already exist)
   if (_analyzer_us_enabled && !_analyzer_us_client) {
     _analyzer_us_client = new PsychicMqttClient();
@@ -2806,22 +2865,25 @@ void MQTTBridge::publishStatusToAnalyzerClient(PsychicMqttClient* client, const 
 }
 
 void MQTTBridge::maintainAnalyzerConnections() {
-  if (!_identity) {
+  if (!_analyzer_us_enabled && !_analyzer_eu_enabled) {
     return;
   }
-  
-  // Check WiFi status first - don't attempt MQTT reconnection if WiFi is disconnected
-  if (WiFi.status() != WL_CONNECTED) {
+
+  if (!areAnalyzerPrerequisitesReady()) {
+    static unsigned long last_prereq_warning = 0;
+    unsigned long now = millis();
+    if (now - last_prereq_warning > 300000) {
+      MQTT_DEBUG_PRINTLN("Deferring analyzer connects until prerequisites are ready (wifi=%s, time=%s, identity=%s)",
+                         WiFi.status() == WL_CONNECTED ? "ok" : "wait",
+                         isSystemTimeReady() ? "ok" : "wait",
+                         _identity ? "ok" : "missing");
+      last_prereq_warning = now;
+    }
     return;
   }
-  
-  // JWT tokens require valid timestamps. Allow if NTP sync flag is set, or if system clock
-  // is clearly set (e.g. not firmware default 2024) so we don't block reconnection after
-  // a successful NTP sync at boot when _ntp_synced might be wrong.
-  unsigned long clock_sec = time(nullptr);
-  bool clock_looks_set = (clock_sec >= 1735689600);  // 2025-01-01 00:00:00 UTC
-  if (!_ntp_synced && !clock_looks_set) {
-    return;
+
+  if ((_analyzer_us_enabled && !_analyzer_us_client) || (_analyzer_eu_enabled && !_analyzer_eu_client)) {
+    setupAnalyzerClients();
   }
   
   // Create JWT tokens if any enabled analyzer is missing a token.
@@ -2848,7 +2910,7 @@ void MQTTBridge::maintainAnalyzerConnections() {
   // If time is not synced (time() returns 0 or very small value), skip expiration checks
   // Tokens will still work but we can't track expiration properly
   // If expiration time was set before time sync, it will be a small value, so we'll renew
-  bool time_synced = (current_time >= 1000000000); // After year 2001
+  bool time_synced = isSystemTimeReady();
   
   const unsigned long RENEWAL_BUFFER = 60; // Renew tokens 60 seconds before expiration (minimal buffer to avoid downtime)
   const unsigned long DISCONNECT_THRESHOLD = 60; // Only disconnect if token expires within 60 seconds

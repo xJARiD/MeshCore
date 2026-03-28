@@ -99,9 +99,11 @@ private:
   
   // Packet queue for offline scenarios
   struct QueuedPacket {
-    mesh::Packet* packet;
     unsigned long timestamp;
     bool is_tx;
+    uint8_t packet_len;
+    int8_t packet_snr;
+    uint8_t packet_data[MAX_TRANS_UNIT];
     // Store raw radio data with each packet to avoid it being overwritten
     uint8_t raw_data[256];
     int raw_len;
@@ -226,6 +228,10 @@ private:
   void runCriticalMemoryCheckAndRecovery();  // Unified heap check, pressure timer, optional recovery
   #endif
   void recreateMqttClientsForFragmentationRecovery();  // Disconnect, delete, recreate all MQTT clients to recover max_alloc
+  bool isSystemTimeReady() const;
+  bool brokerRequiresJWT(const MQTTBroker& broker) const;
+  bool isBrokerReadyToConnect(const MQTTBroker& broker) const;
+  bool areAnalyzerPrerequisitesReady() const;
   void connectToBrokers();
   void processPacketQueue();
   bool publishStatus();  // Returns true if status was successfully published
