@@ -332,7 +332,19 @@ static void setMQTTPrefsDefaults(MQTTPrefs* prefs) {
   #else
   prefs->wifi_power_save = 0; // Default to WIFI_PS_MIN_MODEM (0=min)
   #endif
-  // String fields are already zero-initialized by memset
+
+  // Seed first-boot MQTT defaults from build flags so loadMQTTPrefs() does not
+  // overwrite compile-time broker settings with empty values when /mqtt_prefs
+  // does not exist yet.
+  #ifdef MQTT_SERVER
+  StrHelper::strncpy(prefs->mqtt_server, MQTT_SERVER, sizeof(prefs->mqtt_server));
+  #endif
+  #ifdef MQTT_PORT
+  prefs->mqtt_port = MQTT_PORT;
+  #endif
+  #ifdef MQTT_PASSWORD
+  StrHelper::strncpy(prefs->mqtt_password, MQTT_PASSWORD, sizeof(prefs->mqtt_password));
+  #endif
 }
 
 void CommonCLI::loadMQTTPrefs(FILESYSTEM* fs) {
