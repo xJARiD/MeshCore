@@ -284,11 +284,12 @@ MQTTBridge::MQTTBridge(NodePrefs *prefs, mesh::PacketManager *mgr, mesh::RTCCloc
               _token_us_expires_at(0), _token_eu_expires_at(0),
               _analyzer_us_enabled(false), _analyzer_eu_enabled(false), _identity(identity),
               _analyzer_us_client(nullptr), _analyzer_eu_client(nullptr), _config_valid(false),
-              _cached_has_brokers(false), _cached_has_analyzer_servers(false),
-              _last_memory_check(0), _skipped_publishes(0), _last_fragmentation_recovery(0),
-              _fragmentation_pressure_since(0), _last_critical_check_run(0), _last_token_renewal_attempt_us(0),
-              _last_token_renewal_attempt_eu(0), _last_reconnect_attempt_us(0), _last_reconnect_attempt_eu(0),
-              _last_no_broker_log(0), _last_config_warning(0), _dispatcher(nullptr), _radio(nullptr), _board(nullptr), _ms(nullptr),
+	              _cached_has_brokers(false), _cached_has_analyzer_servers(false),
+	              _last_memory_check(0), _skipped_publishes(0), _last_fragmentation_recovery(0),
+	              _fragmentation_pressure_since(0), _last_critical_check_run(0), _all_mqtt_disconnected_since(0),
+	              _last_outage_recovery(0), _last_token_renewal_attempt_us(0),
+	              _last_token_renewal_attempt_eu(0), _last_reconnect_attempt_us(0), _last_reconnect_attempt_eu(0),
+	              _last_no_broker_log(0), _last_config_warning(0), _dispatcher(nullptr), _radio(nullptr), _board(nullptr), _ms(nullptr),
               _last_wifi_check(0), _last_wifi_status(WL_DISCONNECTED), _wifi_status_initialized(false),
               _wifi_disconnected_time(0), _last_wifi_reconnect_attempt(0), _wifi_reconnect_backoff_attempt(0),
               _main_broker_reconnect_backoff_attempt(0), _analyzer_us_reconnect_backoff_attempt(0), _analyzer_eu_reconnect_backoff_attempt(0)
@@ -1306,6 +1307,8 @@ void MQTTBridge::runCriticalMemoryCheckAndRecovery() {
   const unsigned long PRESSURE_WINDOW_CRITICAL_MS = 180000;  // Recover if critical pressure for 3 min
   const unsigned long PRESSURE_WINDOW_MODERATE_MS = 300000; // Recover if moderate pressure for 5 min
   const unsigned long RECOVERY_THROTTLE_MS = 300000;         // 5 min between recovery runs
+  const unsigned long DISCONNECTED_RECOVERY_WINDOW_MS = 180000;  // Recreate clients after 3 min fully disconnected
+  const unsigned long DISCONNECTED_REBOOT_WINDOW_MS = 1800000;   // Reboot after 30 min fully disconnected with backlog
   const unsigned long CRITICAL_LOG_INTERVAL_MS = 900000;     // Log CRITICAL/WARNING/client count at most every 15 min
   const size_t pressure_threshold_critical = getAdaptiveCriticalThreshold();
   const size_t pressure_threshold_moderate = getAdaptiveModerateThreshold();
@@ -1351,6 +1354,18 @@ void MQTTBridge::runCriticalMemoryCheckAndRecovery() {
     MQTT_DEBUG_PRINTLN("MQTT clients active: %d (main=%d us=%d eu=%d)", n_main + n_us + n_eu, n_main, n_us, n_eu);
   }
 
+  bool wifi_connected = (WiFi.status() == WL_CONNECTED);
+  bool any_destinations_connected = _cached_has_brokers || _cached_has_analyzer_servers;
+  bool queue_backlogged = (_queue_count > 0);
+
+  if (wifi_connected && queue_backlogged && !any_destinations_connected) {
+    if (_all_mqtt_disconnected_since == 0) {
+      _all_mqtt_disconnected_since = now;
+    }
+  } else {
+    _all_mqtt_disconnected_since = 0;
+  }
+
   // Dedicated recovery: critical pressure recovers after 3 min; moderate pressure after 5 min
   unsigned long required_window_ms = (max_alloc < pressure_threshold_critical)
       ? PRESSURE_WINDOW_CRITICAL_MS
@@ -1362,6 +1377,25 @@ void MQTTBridge::runCriticalMemoryCheckAndRecovery() {
     _fragmentation_pressure_since = 0;
     MQTT_DEBUG_PRINTLN("Fragmentation recovery: recreating MQTT clients (max_alloc=%d, pressure %lu min)", (int)max_alloc, (unsigned long)(required_window_ms / 60000));
     recreateMqttClientsForFragmentationRecovery();
+  }
+
+  if (_all_mqtt_disconnected_since != 0) {
+    unsigned long disconnected_for_ms = now - _all_mqtt_disconnected_since;
+
+    if (disconnected_for_ms >= DISCONNECTED_RECOVERY_WINDOW_MS &&
+        (now - _last_outage_recovery) >= RECOVERY_THROTTLE_MS) {
+      _last_outage_recovery = now;
+      MQTT_DEBUG_PRINTLN("MQTT outage recovery: WiFi up, queue=%d, all destinations down for %lu ms, recreating clients",
+                         _queue_count, disconnected_for_ms);
+      recreateMqttClientsForFragmentationRecovery();
+    }
+
+    if (disconnected_for_ms >= DISCONNECTED_REBOOT_WINDOW_MS) {
+      MQTT_DEBUG_PRINTLN("MQTT outage recovery: WiFi up, queue=%d, all destinations down for %lu ms, rebooting",
+                         _queue_count, disconnected_for_ms);
+      delay(100);
+      ESP.restart();
+    }
   }
 }
 #endif
@@ -1639,18 +1673,28 @@ void MQTTBridge::processPacketQueue() {
     }
     packet_copy._snr = queued.packet_snr;
 
-    publishPacket(&packet_copy, queued.is_tx,
-                  queued.has_raw_data ? queued.raw_data : nullptr,
-                  queued.has_raw_data ? queued.raw_len : 0,
-                  queued.has_raw_data ? queued.snr : 0.0f,
-                  queued.has_raw_data ? queued.rssi : 0.0f);
+    bool packet_published = publishPacket(&packet_copy, queued.is_tx,
+                                          queued.has_raw_data ? queued.raw_data : nullptr,
+                                          queued.has_raw_data ? queued.raw_len : 0,
+                                          queued.has_raw_data ? queued.snr : 0.0f,
+                                          queued.has_raw_data ? queued.rssi : 0.0f);
+    bool raw_published = !_raw_enabled || publishRaw(&packet_copy);
 
-    if (_raw_enabled) {
-      publishRaw(&packet_copy);
+    if (packet_published && raw_published) {
+      _queue_count--;
+      processed++;
+      continue;
     }
-    
-    _queue_count--;
-    processed++;
+
+    if (xQueueSendToFront(_packet_queue_handle, &queued, 0) != pdTRUE) {
+      MQTT_DEBUG_PRINTLN("Dropping queued packet snapshot after publish failure because requeue failed");
+      _queue_count--;
+      processed++;
+      continue;
+    }
+
+    _queue_count = uxQueueMessagesWaiting(_packet_queue_handle);
+    break;
     
     // No need for vTaskDelay here - task already yields at end of main loop
   }
@@ -1693,21 +1737,25 @@ void MQTTBridge::processPacketQueue() {
     if (packet_copy.readFrom(queued.packet_data, queued.packet_len)) {
       packet_copy._snr = queued.packet_snr;
 
-      publishPacket(&packet_copy, queued.is_tx,
-                    queued.has_raw_data ? queued.raw_data : nullptr,
-                    queued.has_raw_data ? queued.raw_len : 0,
-                    queued.has_raw_data ? queued.snr : 0.0f,
-                    queued.has_raw_data ? queued.rssi : 0.0f);
+      bool packet_published = publishPacket(&packet_copy, queued.is_tx,
+                                            queued.has_raw_data ? queued.raw_data : nullptr,
+                                            queued.has_raw_data ? queued.raw_len : 0,
+                                            queued.has_raw_data ? queued.snr : 0.0f,
+                                            queued.has_raw_data ? queued.rssi : 0.0f);
+      bool raw_published = !_raw_enabled || publishRaw(&packet_copy);
 
-      if (_raw_enabled) {
-        publishRaw(&packet_copy);
+      if (packet_published && raw_published) {
+        dequeuePacket();
+        processed++;
+        continue;
       }
+
+      break;
     } else {
       MQTT_DEBUG_PRINTLN("Dropping queued packet snapshot with invalid encoding (len=%u)", queued.packet_len);
+      dequeuePacket();
+      processed++;
     }
-    
-    dequeuePacket();
-    processed++;
   }
   #endif
 }
@@ -1924,10 +1972,10 @@ bool MQTTBridge::publishStatus() {
           return false;  // Failed to build or publish message
 }
 
-void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx, 
-                                const uint8_t* raw_data, int raw_len, 
+bool MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
+                                const uint8_t* raw_data, int raw_len,
                                 float snr, float rssi) {
-  if (!packet) return;
+  if (!packet) return false;
   
   // Check if IATA is configured before attempting to publish
   if (!isIATAValid()) {
@@ -1938,7 +1986,7 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
       MQTT_DEBUG_PRINTLN("MQTT: Cannot publish packet - IATA code not configured (current: '%s'). Please set mqtt.iata via CLI.", _iata);
       last_iata_warning = now;
     }
-    return;
+    return false;
   }
   
   // Adaptive memory pressure check: only skip when contiguous heap is critically low.
@@ -1962,7 +2010,7 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
         last_skip_log = now;
       }
       _last_memory_check = now;
-      return;
+      return false;
     }
     _last_memory_check = now;
   }
@@ -2011,6 +2059,7 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
   }
   
   if (len > 0) {
+    bool published = false;
     // Build topic string once and reuse (optimization: avoid redundant snprintf calls)
     char topic[128];
     snprintf(topic, sizeof(topic), "meshcore/%s/%s/packets", _iata, _device_id);
@@ -2041,6 +2090,7 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
           // This prevents blocking the main loop when MQTT broker is slow or unresponsive
           int publish_result = _mqtt_client->publish(topic, 1, false, active_buffer, json_len); // qos=1, retained=false
           if (publish_result > 0) {
+            published = true;
             s_consecutive_main_publish_failures = 0;
           } else {
             s_consecutive_main_publish_failures++;
@@ -2081,23 +2131,30 @@ void MQTTBridge::publishPacket(mesh::Packet* packet, bool is_tx,
     #ifdef ESP32
     size_t max_alloc = ESP.getMaxAllocHeap();
     if (max_alloc >= getAdaptivePublishMinAlloc(1)) {
-      publishToAnalyzerServers(topic, active_buffer, false);
+      if (publishToAnalyzerServers(topic, active_buffer, false)) {
+        published = true;
+      }
     }
     #else
-    publishToAnalyzerServers(topic, active_buffer, false);
+    if (publishToAnalyzerServers(topic, active_buffer, false)) {
+      published = true;
+    }
     #endif
+    psram_free(json_buffer_psram);
+    return published;
   } else {
     // Debug: log when packet message building fails
     uint8_t packet_type = packet->getPayloadType();
     if (packet_type == 4 || packet_type == 9) {  // ADVERT or TRACE
-      MQTT_DEBUG_PRINTLN("Failed to build packet JSON for type=%d (len=%d), packet not published", packet_type, len);
+        MQTT_DEBUG_PRINTLN("Failed to build packet JSON for type=%d (len=%d), packet not published", packet_type, len);
     }
   }
   psram_free(json_buffer_psram);
+  return false;
 }
 
-void MQTTBridge::publishRaw(mesh::Packet* packet) {
-  if (!packet) return;
+bool MQTTBridge::publishRaw(mesh::Packet* packet) {
+  if (!packet) return false;
   
   // Check if IATA is configured before attempting to publish
   if (!isIATAValid()) {
@@ -2108,7 +2165,7 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
       MQTT_DEBUG_PRINTLN("MQTT: Cannot publish raw packet - IATA code not configured (current: '%s'). Please set mqtt.iata via CLI.", _iata);
       last_iata_warning = now;
     }
-    return;
+    return false;
   }
   
   // JSON buffer: prefer PSRAM (plan §4); fallback to stack if allocation fails
@@ -2137,6 +2194,7 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
   );
   
   if (len > 0) {
+    bool published = false;
     // Build topic string once and reuse (optimization: avoid redundant snprintf calls)
     char topic[128];
     snprintf(topic, sizeof(topic), "meshcore/%s/%s/raw", _iata, _device_id);
@@ -2166,6 +2224,7 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
           // Publish with timeout check - don't block if connection is slow
           int publish_result = _mqtt_client->publish(topic, 1, false, active_buffer, json_len); // qos=1, retained=false
           if (publish_result > 0) {
+            published = true;
             s_consecutive_main_publish_failures = 0;
           } else {
             s_consecutive_main_publish_failures++;
@@ -2197,13 +2256,20 @@ void MQTTBridge::publishRaw(mesh::Packet* packet) {
     #ifdef ESP32
     size_t max_alloc = ESP.getMaxAllocHeap();
     if (max_alloc >= getAdaptivePublishMinAlloc(1)) {
-      publishToAnalyzerServers(topic, active_buffer, false);
+      if (publishToAnalyzerServers(topic, active_buffer, false)) {
+        published = true;
+      }
     }
     #else
-    publishToAnalyzerServers(topic, active_buffer, false);
+    if (publishToAnalyzerServers(topic, active_buffer, false)) {
+      published = true;
+    }
     #endif
+    psram_free(json_buffer_psram);
+    return published;
   }
   psram_free(json_buffer_psram);
+  return false;
 }
 
 void MQTTBridge::queuePacket(mesh::Packet* packet, bool is_tx) {

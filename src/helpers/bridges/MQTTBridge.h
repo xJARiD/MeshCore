@@ -169,6 +169,8 @@ private:
   unsigned long _last_fragmentation_recovery;  // Throttle: 5 min between recovery runs (task + loop)
   unsigned long _fragmentation_pressure_since;  // 0 = not under pressure; else first time max_alloc < threshold
   unsigned long _last_critical_check_run;  // Throttle: run unified check at most every 60s
+  unsigned long _all_mqtt_disconnected_since;  // 0 = at least one destination healthy, else first full-outage time
+  unsigned long _last_outage_recovery;  // Throttle client recreation when all MQTT destinations are down
   unsigned long _last_token_renewal_attempt_us;
   unsigned long _last_token_renewal_attempt_eu;
   unsigned long _last_reconnect_attempt_us;
@@ -245,10 +247,10 @@ private:
   void mqttTaskLoop();  // Main loop for MQTT task
   void initializeWiFiInTask();  // WiFi initialization moved to task
   #endif
-  void publishPacket(mesh::Packet* packet, bool is_tx, 
-                     const uint8_t* raw_data = nullptr, int raw_len = 0, 
+  bool publishPacket(mesh::Packet* packet, bool is_tx,
+                     const uint8_t* raw_data = nullptr, int raw_len = 0,
                      float snr = 0.0f, float rssi = 0.0f);
-  void publishRaw(mesh::Packet* packet);
+  bool publishRaw(mesh::Packet* packet);
   void queuePacket(mesh::Packet* packet, bool is_tx);
   void dequeuePacket();
   bool isAnyBrokerConnected();

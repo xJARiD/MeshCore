@@ -350,6 +350,53 @@ static void setMQTTPrefsDefaults(MQTTPrefs* prefs) {
 void CommonCLI::loadMQTTPrefs(FILESYSTEM* fs) {
   // Initialize with defaults first
   setMQTTPrefsDefaults(&_mqtt_prefs);
+
+  // Seed MQTT prefs from the current in-memory NodePrefs defaults before loading
+  // any persisted file. This preserves build-time and constructor-set defaults
+  // (for example mqtt.iata, broker host/port/password, analyzer flags, timezone,
+  // and WiFi placeholders) on first boot when /mqtt_prefs does not exist yet.
+  if (_prefs->mqtt_origin[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_origin, _prefs->mqtt_origin, sizeof(_mqtt_prefs.mqtt_origin));
+  }
+  if (_prefs->mqtt_iata[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_iata, _prefs->mqtt_iata, sizeof(_mqtt_prefs.mqtt_iata));
+  }
+  if (_prefs->wifi_ssid[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.wifi_ssid, _prefs->wifi_ssid, sizeof(_mqtt_prefs.wifi_ssid));
+  }
+  if (_prefs->wifi_password[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.wifi_password, _prefs->wifi_password, sizeof(_mqtt_prefs.wifi_password));
+  }
+  _mqtt_prefs.wifi_power_save = _prefs->wifi_power_save;
+  if (_prefs->timezone_string[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.timezone_string, _prefs->timezone_string, sizeof(_mqtt_prefs.timezone_string));
+  }
+  _mqtt_prefs.timezone_offset = _prefs->timezone_offset;
+  if (_prefs->mqtt_server[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_server, _prefs->mqtt_server, sizeof(_mqtt_prefs.mqtt_server));
+  }
+  if (_prefs->mqtt_port != 0) {
+    _mqtt_prefs.mqtt_port = _prefs->mqtt_port;
+  }
+  if (_prefs->mqtt_username[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_username, _prefs->mqtt_username, sizeof(_mqtt_prefs.mqtt_username));
+  }
+  if (_prefs->mqtt_password[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_password, _prefs->mqtt_password, sizeof(_mqtt_prefs.mqtt_password));
+  }
+  _mqtt_prefs.mqtt_status_enabled = _prefs->mqtt_status_enabled;
+  _mqtt_prefs.mqtt_packets_enabled = _prefs->mqtt_packets_enabled;
+  _mqtt_prefs.mqtt_raw_enabled = _prefs->mqtt_raw_enabled;
+  _mqtt_prefs.mqtt_tx_enabled = _prefs->mqtt_tx_enabled;
+  _mqtt_prefs.mqtt_status_interval = _prefs->mqtt_status_interval;
+  _mqtt_prefs.mqtt_analyzer_us_enabled = _prefs->mqtt_analyzer_us_enabled;
+  _mqtt_prefs.mqtt_analyzer_eu_enabled = _prefs->mqtt_analyzer_eu_enabled;
+  if (_prefs->mqtt_owner_public_key[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_owner_public_key, _prefs->mqtt_owner_public_key, sizeof(_mqtt_prefs.mqtt_owner_public_key));
+  }
+  if (_prefs->mqtt_email[0] != '\0') {
+    StrHelper::strncpy(_mqtt_prefs.mqtt_email, _prefs->mqtt_email, sizeof(_mqtt_prefs.mqtt_email));
+  }
   
   bool file_existed = fs->exists("/mqtt_prefs");
   if (file_existed) {
